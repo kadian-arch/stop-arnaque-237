@@ -4,7 +4,7 @@ Last updated: 26/09/2026
 
 ## Who runs this
 Stop Arnaque 237 is an independent project by Kum Donalsien Akwo, a cybersecurity engineer in Buea, Cameroon.
-Contact: [PROJECT EMAIL]
+Contact: groundtruth.cm@gmail.comm
 
 ## Why we collect reports
 To build an open dataset of real scams in Cameroon, and free tools that warn people before they lose money.
@@ -41,9 +41,9 @@ If this notice changes, the date at the top changes too.
 
 # Stop Arnaque 237 : Politique de confidentialité
 
-Dernière mise à jour : [DATE]
+Dernière mise à jour : 26/09/2026
 
-**Qui sommes-nous :** un projet indépendant de Kum Donalsien Akwo, ingénieur en cybersécurité à Buea. Contact : [PROJECT EMAIL]
+**Qui sommes-nous :** un projet indépendant de Kum Donalsien Akwo, ingénieur en cybersécurité à Buea. Contact : groundtruth.cm@gmail.com
 
 **Pourquoi :** construire une base de données ouverte sur les arnaques au Cameroun et des outils gratuits qui préviennent avant de perdre de l'argent.
 
