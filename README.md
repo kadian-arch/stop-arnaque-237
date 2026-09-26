@@ -23,4 +23,4 @@ See [PRIVACY.md](PRIVACY.md).
 Data: Creative Commons Attribution 4.0 (CC BY 4.0), from the first release.
 
 ## Contact
-Kum Donalsien Akwo, [PROJECT EMAIL]
+Kum Donalsien Akwo, groundtruth.cm@gmail.com
