@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import anonymize as A
+from . import lang
 from . import taxonomy as T
 from .ingest_form import read_tally_csv, missing_columns
 
@@ -35,7 +36,7 @@ EVERYDAY_MOMO = {"wrong_number_reversal", "deposit_withdrawal_trap", "account_bl
 
 REPORT_FIELDS = [
     "id", "record_type", "source", "submitted_month", "when", "channel", "scam_types",
-    "message_text", "text_origin", "has_screenshot", "sender", "sender_type", "sender_phone_id",
+    "message_text", "text_origin", "message_language", "screenshot_text", "has_screenshot", "attachment_kinds", "sender", "sender_type", "sender_phone_id",
     "phone_ids", "domains", "caller_claimed", "caller_asked", "call_language", "call_end", "call_description",
     "outcome", "amount_lost_fcfa", "payment_rails", "actions_after", "region", "extra_notes",
     "would_use_tool", "message_cluster", "src_channel",
@@ -83,52 +84,74 @@ def _load_overrides():
 
 
 # ---------------- screenshots ----------------
-def fetch_screenshots(reports, log):
-    """Download screenshot links from the export into raw/screenshots/<submission>/ (private)."""
+def fetch_attachments(reports, log):
+    """Download every uploaded file into raw/screenshots/<submission>/ (private), whatever its type.
+    Files dropped in that folder by hand are picked up too."""
     import requests
+    from .attachments import ext_for
     shots = RAW / "screenshots"
     for r in reports:
-        urls = r.get("screenshots") or []
-        r["_shot_files"] = []
-        for i, u in enumerate(urls):
-            ext = Path(u.split("?")[0]).suffix.lower() or ".png"
-            dest = shots / str(r["submission_id"]) / f"{i + 1}{ext}"
-            if not dest.exists():
-                try:
-                    resp = requests.get(u, timeout=40)
-                    resp.raise_for_status()
-                    dest.parent.mkdir(parents=True, exist_ok=True)
-                    dest.write_bytes(resp.content)
-                except Exception as e:  # keep going; the review queue shows what failed
-                    log.append(f"screenshot download failed for {r['submission_id']}: {e}")
-                    continue
-            r["_shot_files"].append(dest)
-    # screenshots the maintainer dropped in by hand: raw/screenshots/<submission_id>/*
-    for r in reports:
+        r["_files"], r["_failed"] = [], 0
         folder = shots / str(r["submission_id"])
+        for i, u in enumerate(r.get("screenshots") or []):
+            existing = sorted(folder.glob(f"dl{i + 1}.*")) if folder.exists() else []
+            if existing:
+                r["_files"].append(existing[0])
+                continue
+            try:
+                resp = requests.get(u, timeout=60, stream=True)
+                resp.raise_for_status()
+                size = int(resp.headers.get("content-length") or 0)
+                if size > 60_000_000:
+                    raise ValueError(f"file too large ({size} bytes)")
+                dest = folder / f"dl{i + 1}{ext_for(u, resp.headers.get('content-type'))}"
+                folder.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(resp.content)
+                r["_files"].append(dest)
+            except Exception as e:  # keep going; the review queue lists it
+                r["_failed"] += 1
+                log.append(f"download failed for {r['submission_id']} file {i + 1}: {e}")
         if folder.exists():
             for p in sorted(folder.iterdir()):
-                if p not in r["_shot_files"] and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
-                    r["_shot_files"].append(p)
+                if p.is_file() and p not in r["_files"]:
+                    r["_files"].append(p)
 
 
-def run_ocr(reports, log):
+def read_attachments(reports, log):
+    """OCR images and scanned PDFs, extract text from text PDFs; audio/video are only flagged."""
+    from .attachments import kind, ocr_ready, pdf_text
     from .ocr import ocr_images
-    files = [p for r in reports for p in r.get("_shot_files", [])]
-    if not files:
-        return
-    try:
-        res = ocr_images(files, RAW / "ocr_cache.json")
-    except Exception as e:
-        log.append(f"OCR unavailable: {e}")
-        return
+    plan = {}
     for r in reports:
-        r["_ocr"] = "\n\n".join(res[str(p.resolve())]["text"] for p in r.get("_shot_files", []) if res.get(str(p.resolve()), {}).get("text"))
+        r["_kinds"] = [kind(p) for p in r.get("_files", [])]
+        r["_pdf_text"] = "\n\n".join(t for t in (pdf_text(p) for p in r["_files"] if kind(p) == "pdf") if t)
+        for p in r["_files"]:
+            plan[p] = ocr_ready(p, RAW / "ocr_work" / str(r["submission_id"]))
+    images = [q for qs in plan.values() for q in qs]
+    res = {}
+    if images:
+        try:
+            res = ocr_images(images, RAW / "ocr_cache.json")
+        except Exception as e:
+            log.append(f"OCR unavailable: {e}")
+    for r in reports:
+        parts = []
+        for p in r["_files"]:
+            texts = [res.get(str(Path(q).resolve()), {}).get("text", "") for q in plan.get(p, [])]
+            joined = "\n".join(t for t in texts if t)
+            if joined:
+                parts.append(joined)
+        if r["_pdf_text"]:
+            parts.append(r["_pdf_text"])
+        r["_ocr"] = "\n\n".join(parts)
+        r["_ocr_failed"] = [str(p) for p in r["_files"] if plan.get(p) and not any(
+            res.get(str(Path(q).resolve()), {}).get("text") for q in plan[p])]
 
 
 # ---------------- reports ----------------
 def build_reports(log, with_screens=True):
-    exports = sorted((RAW / "tally_exports").glob("*.csv"))
+    folder = RAW / "tally_exports"
+    exports = sorted(list(folder.glob("*.csv")) + list(folder.glob("*.xlsx"))) if folder.exists() else []
     reports, seen_ids = [], set()
     for f in exports:
         miss = missing_columns(f)
@@ -140,8 +163,8 @@ def build_reports(log, with_screens=True):
             seen_ids.add(r["submission_id"])
             reports.append(r)
     if with_screens:
-        fetch_screenshots(reports, log)
-        run_ocr(reports, log)
+        fetch_attachments(reports, log)
+        read_attachments(reports, log)
 
     overrides = _load_overrides()
     subscribers, out, review, dropped = [], [], [], Counter()
@@ -154,26 +177,33 @@ def build_reports(log, with_screens=True):
         if ov.get("exclude"):
             dropped[f"excluded:{ov.get('reason', 'review')}"] += 1
             continue
-        if r.get("wants_report_email"):
-            subscribers.append(r["wants_report_email"].strip())
+        email = (r.get("wants_report_email") or "").strip()
+        if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            subscribers.append(email.lower())
 
         pasted = (r.get("message_text") or "").strip()
         ocr = (r.get("_ocr") or "").strip()
         raw_text = ov.get("message_text") or pasted or ocr
-        origin = "reviewed" if ov.get("message_text") else ("pasted" if pasted else ("ocr" if ocr else None))
+        origin = "reviewed" if ov.get("message_text") else ("pasted" if pasted else ("screenshot" if ocr else None))
         text = A.anonymize_text(raw_text)
+        shot_text = A.anonymize_text(ov.get("screenshot_text") or ocr) or None
 
-        sender_raw = r.get("sender") or ""
+        sender_raw = (r.get("sender") or "").strip()
         sender_phone = (A.extract_phones(sender_raw) or [None])[0]
+        stype = r.get("sender_type")
+        if not stype and sender_phone:
+            stype = "personal_number"
         if sender_phone:
             sender = f"[PHONE:{sender_phone}]"
-        elif r.get("sender_type") == "alphanumeric_name":
+        elif stype == "alphanumeric_name" or re.fullmatch(r"(?i)(mobile ?money|momo|orange ?money|mtn\w*|orange\w*|om)", sender_raw):
             sender = A.anonymize_text(sender_raw)
         else:
             sender = "[REDACTED]" if sender_raw else None
 
         caller_ids = A.extract_phones(r.get("caller_number") or "")
-        phone_ids = list(dict.fromkeys(A.extract_phones(raw_text) + ([sender_phone] if sender_phone else []) + caller_ids))
+        all_text = " ".join(filter(None, [raw_text, ocr, r.get("call_description"), r.get("extra_notes")]))
+        phone_ids = list(dict.fromkeys(A.extract_phones(all_text) + ([sender_phone] if sender_phone else []) + caller_ids))
+        kinds = r.get("_kinds") or []
         rec = {
             "id": _hid("R", r["submission_id"]),
             "record_type": "report",
@@ -184,19 +214,22 @@ def build_reports(log, with_screens=True):
             "scam_types": ov.get("scam_types", r.get("scam_types") or []),
             "message_text": text or None,
             "text_origin": origin,
-            "has_screenshot": bool(r.get("screenshots")),
+            "message_language": ov.get("message_language") or lang.detect(raw_text),
+            "screenshot_text": shot_text if shot_text != text else None,
+            "has_screenshot": bool(r.get("screenshots") or r.get("_files")),
+            "attachment_kinds": sorted(set(kinds)) if kinds else ([] if not r.get("screenshots") else ["unknown"]),
             "sender": sender,
-            "sender_type": r.get("sender_type"),
+            "sender_type": stype,
             "sender_phone_id": sender_phone,
             "phone_ids": phone_ids,
-            "domains": A.extract_domains(raw_text),
+            "domains": A.extract_domains(all_text),
             "caller_claimed": r.get("caller_claimed"),
             "caller_asked": r.get("caller_asked") or [],
             "call_language": r.get("call_language"),
             "call_end": r.get("call_end"),
             "call_description": A.anonymize_text(r.get("call_description")),
             "outcome": r.get("outcome"),
-            "amount_lost_fcfa": r.get("amount_lost_fcfa"),
+            "amount_lost_fcfa": r.get("amount_lost_fcfa") if r.get("outcome") in ("lost_money", "someone_else_lost", None) else None,
             "payment_rails": r.get("payment_rails") or [],
             "actions_after": r.get("actions_after") or [],
             "region": r.get("region"),
@@ -208,25 +241,41 @@ def build_reports(log, with_screens=True):
         out.append(rec)
 
         reasons = []
-        if origin == "ocr":
-            reasons.append("ocr_text: check USSD codes (*...#) and numbers against the screenshot")
+        if origin == "screenshot":
+            reasons.append("screenshot_text: check it word for word against the image, including USSD codes and numbers")
         if rec["has_screenshot"] and not ov:
-            reasons.append("has_screenshot: confirm nothing personal is readable in the text")
-        for fld in ("message_text", "call_description", "extra_notes"):
+            reasons.append("attachments: confirm nothing personal is readable and the labels match")
+        for k in ("audio", "video", "other"):
+            if k in kinds:
+                reasons.append(f"{k}_attachment: open it by hand and transcribe what matters")
+        if r.get("_failed"):
+            reasons.append(f"download_failed: {r['_failed']} file(s), download from Tally into raw/screenshots/{r['submission_id']}/")
+        if r.get("_ocr_failed"):
+            reasons.append("ocr_empty: no text read from some images (HEIC/blurry?), read them by hand")
+        for fld in ("message_text", "screenshot_text", "call_description", "extra_notes"):
             if A.needs_review(rec[fld]):
                 reasons.append(f"possible_name_in_{fld}")
-        if not rec["message_text"] and not rec["call_description"] and not rec["extra_notes"]:
-            reasons.append("no_text: labels only")
+        if not any(rec[f] for f in ("message_text", "screenshot_text", "call_description", "extra_notes")):
+            reasons.append("no_text: labels only" + ("" if rec["has_screenshot"] else ", no attachment either"))
+        if not rec["scam_types"] or rec["scam_types"] == ["other"]:
+            reasons.append("scam_type_other: set the real type from the text")
+        if len(rec["scam_types"]) >= 4:
+            reasons.append("many_types: maybe several scams in one report, split with overrides if so")
+        if rec["amount_lost_fcfa"] and rec["amount_lost_fcfa"] > 50_000_000:
+            reasons.append("amount_check: very large amount, typo?")
+        if re.search(r"(?i)\b(test|testing|essai)\b", " ".join(filter(None, [pasted, r.get("extra_notes")]))) and len(pasted) < 40:
+            reasons.append("maybe_test_submission")
         if reasons and not ov.get("reviewed"):
             review.append({"key": key, "id": rec["id"], "reasons": " | ".join(reasons),
-                           "screenshots": ";".join(str(p) for p in r.get("_shot_files", [])),
+                           "files": ";".join(str(p) for p in r.get("_files", [])),
                            "message_text": rec["message_text"] or "", "raw_pasted": pasted, "ocr": ocr})
 
     # identical double submissions -> keep the first
     uniq, sig_seen = [], set()
     for rec in out:
-        sig = (rec["message_text"], rec["sender"], tuple(rec["scam_types"]), rec["outcome"], rec["region"], rec["when"])
-        if rec["message_text"] and sig in sig_seen:
+        sig = (rec["message_text"], rec["screenshot_text"], rec["sender"], tuple(rec["scam_types"]), rec["outcome"],
+               rec["region"], rec["when"], rec["channel"])
+        if (rec["message_text"] or rec["screenshot_text"]) and sig in sig_seen:
             dropped["duplicate_submission"] += 1
             continue
         sig_seen.add(sig)
@@ -355,7 +404,7 @@ def build(version="dev", with_screens=True):
 
     RAW.mkdir(exist_ok=True)
     with open(RAW / "review_queue.csv", "w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=["key", "id", "reasons", "screenshots", "message_text", "raw_pasted", "ocr"])
+        w = csv.DictWriter(f, fieldnames=["key", "id", "reasons", "files", "message_text", "raw_pasted", "ocr"])
         w.writeheader()
         w.writerows(review)
     if subscribers:

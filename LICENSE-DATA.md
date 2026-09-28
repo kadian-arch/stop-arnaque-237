@@ -7,6 +7,6 @@ You may share and adapt the data for any purpose, including commercially, as lon
 
 > Stop Arnaque 237: Cameroon Scam Reports Dataset. https://github.com/kadian-arch/stop-arnaque-237
 
-Public alert summaries are written by the project. Each one links to its original source (StopBlaBlaCam, 237 Check, PesaCheck, Ministry of Finance, Orange Cameroun, MINPOSTEL, 237actu, Le Bled Parle, 237online, allAfrica), whose articles remain the property of their publishers. Short scam messages quoted by a source (`example_message`) are reproduced as evidence of the scam, anonymized.
+Public alert summaries are written by the project. Each one links to its original source (named in its `source` field), whose articles remain the property of their publishers. Short scam messages quoted by a source (`example_message`) are reproduced as evidence of the scam, anonymized.
 
 The code in `pipeline/` is under the MIT licence (see LICENSE).

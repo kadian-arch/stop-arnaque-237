@@ -41,7 +41,7 @@ Only anonymized reports, as an open dataset under the Creative Commons Attributi
 
 Dernière mise à jour : 28/09/2026
 
-**Qui sommes-nous :** un projet indépendant de Kum Donalsien Akwo, ingénieur en cybersécurité à Buea. Contact : groundtruth.cm@gmail.com
+**Qui sommes-nous :** un projet indépendant de Donalsien A., ingénieur en cybersécurité à Buea. Contact : groundtruth.cm@gmail.com
 
 **Pourquoi :** construire une base de données ouverte sur les arnaques au Cameroun et des outils gratuits qui préviennent avant de perdre de l'argent.
 

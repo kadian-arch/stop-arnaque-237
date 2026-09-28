@@ -22,7 +22,7 @@ Three files per release:
 
 Each comes as `.jsonl` and `.csv` (list fields joined with `|`).
 
-**Report fields:** channel, scam types, the message text (anonymized), sender type, the sender's pseudonymized number, numbers and domains in the text, call details (who the caller claimed to be, what they asked, language, how it ended), outcome, amount lost, payment rail, what the person did after, region, approximate date, and a `message_cluster` id shared by reports of the same message.
+**Report fields:** channel, scam types, the message text (anonymized) and its language, text read from uploaded files, attachment types, sender type, the sender's pseudonymized number, numbers and domains in the text, call details (who the caller claimed to be, what they asked, language, how it ended), outcome, amount lost, payment rail, what the person did after, region, approximate date, and a `message_cluster` id shared by reports of the same message.
 
 **Public alert fields:** source, source URL, publication date, title, a short summary written by the project, who was impersonated, who was targeted, channels, scam types, requested actions, amount requested, the scam message itself when the source quotes it (`example_message`, anonymized), pseudonymized numbers, defanged domains.
 
@@ -36,7 +36,7 @@ All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
 **Reports:** an anonymous bilingual (English/French) form on Tally, shared on WhatsApp and Facebook from September 2026. Respondents must confirm they are 18 or older and agree to open publication of their anonymized report. The form never asks for names, PINs, codes, balances or ID documents. The `src_channel` field records which link a report came through (group, status, dm, fb).
 
-**Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus mobile money warnings from Orange Cameroun, MINPOSTEL, 237actu, Le Bled Parle, 237online and allAfrica. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every alert links to its source.
+**Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus warnings from Orange Cameroun, MINPOSTEL and Cameroonian and regional news sites on mobile money tricks, fake utility agents, WhatsApp account takeovers, loan apps, Ponzi schemes and romance scams. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every alert links to its source.
 
 **Time frame:** public alerts from March 2020. Reports describe scams from any date, bucketed by the respondent (`when`).
 
@@ -55,7 +55,14 @@ Applied by `pipeline/anonymize.py` before anything is written to a release:
 
 ## Preprocessing and labels
 
-Scam types come from what the respondent ticked. Corrections made during review are recorded privately and applied on every build, so the process is repeatable. Screenshot text is read with Windows OCR (English and French). OCR often misses `*` and `#` characters, so USSD codes in OCR text are checked against the screenshot by hand.
+Scam types come from what the respondent ticked. Corrections made during review are recorded privately and applied on every build, so the process is repeatable.
+
+Uploaded files are handled by type:
+- **Screenshots** are read with OCR (English and French). Long screenshots are cut into parts.
+- **PDFs** give their text directly, or are OCR'd if scanned.
+- **Voice notes and videos** are listened to or watched by hand.
+
+Every transcription is checked by hand against the original before release. `text_origin` says where `message_text` came from (`pasted`, `screenshot` or `reviewed`), and `message_language` gives the language (`en`, `fr`, `pidgin`, `mixed`).
 
 ## Uses
 

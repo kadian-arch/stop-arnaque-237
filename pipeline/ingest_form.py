@@ -5,6 +5,8 @@ survives wording tweaks. Multi-choice answers are read in either layout Tally ma
 one column holding all ticked options, or one column per option ("Title (Option)") with true/false.
 """
 import csv
+import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -86,35 +88,86 @@ def _value(row, key, cols):
     if kind == "many":
         return T.match_many(cell, table)
     if kind == "number":
-        d = re.sub(r"[^\d]", "", cell)
-        return int(d) if d else None
+        return parse_amount(cell)
     if kind == "files":
-        return re.findall(r"https?://\S+?(?=,\s*https?://|\s|$|,$)", cell)
+        return re.findall(r"https?://[^\s,()\"']+", cell)
     return cell or None
 
 
+def parse_amount(cell):
+    """'25000', '25 000', '25.000', '25000.00', '25k', '2,5 millions', '1.5m' -> int FCFA."""
+    s = str(cell or "").strip().lower().replace(" ", " ")
+    if not s:
+        return None
+    mult = 1
+    if re.search(r"\d\s*(k|mille)\b", s):
+        mult = 1_000
+    elif re.search(r"\d\s*(m|mil|million|millions|mio)\b", s):
+        mult = 1_000_000
+    num = re.search(r"\d[\d\s.,']*", s)
+    if not num:
+        return None
+    t = num.group(0).strip().replace(" ", "").replace("'", "")
+    if re.fullmatch(r"\d{1,3}([.,]\d{3})+", t):          # thousands separators: 25.000 / 1,500,000
+        t = re.sub(r"[.,]", "", t)
+    elif re.fullmatch(r"\d+[.,]\d{1,2}", t):             # decimals: 25000.00 / 2,5
+        t = t.replace(",", ".")
+    else:
+        t = re.sub(r"[.,]", "", t)
+    try:
+        return int(round(float(t) * mult))
+    except ValueError:
+        return None
+
+
+def load_table(path: Path):
+    """(headers, rows) from a Tally .csv (comma or semicolon, UTF-8 or Windows encoding,
+    e.g. after being opened and re-saved in Excel) or an .xlsx export."""
+    if path.suffix.lower() in (".xlsx", ".xlsm"):
+        from openpyxl import load_workbook
+        ws = load_workbook(path, read_only=True, data_only=True).active
+        it = ws.iter_rows(values_only=True)
+        headers = [str(h or "").strip() for h in next(it)]
+        rows = [{h: ("" if v is None else str(v)) for h, v in zip(headers, r)} for r in it if any(v not in (None, "") for v in r)]
+        return headers, rows
+    raw = path.read_bytes()
+    for enc in ("utf-8-sig", "cp1252", "latin-1"):
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    first = text.splitlines()[0] if text else ""
+    delim = ";" if first.count(";") > first.count(",") else ","
+    reader = csv.DictReader(text.splitlines(keepends=True), delimiter=delim)
+    headers = reader.fieldnames or []
+    rows = [r for r in reader if any((v or "").strip() for v in r.values() if isinstance(v, str))]
+    return headers, rows
+
+
 def read_tally_csv(path: Path) -> list:
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        cols = _columns(reader.fieldnames or [])
-        rows = list(reader)
+    headers, rows = load_table(Path(path))
+    cols = _columns(headers)
     out = []
     for row in rows:
+        sid = row.get("Submission ID") or row.get("Response ID") or row.get("ID")
+        if not sid:  # never seen in Tally exports, but never lose a row over it
+            sid = "nosid-" + hashlib.sha1(json.dumps(row, sort_keys=True).encode()).hexdigest()[:10]
         rec = {
             "record_type": "report",
             "source": "form",
-            "submission_id": row.get("Submission ID") or row.get("Response ID") or row.get("ID"),
+            "submission_id": sid,
             "submitted_at": row.get("Submitted at") or row.get("Created at") or row.get("Date"),
         }
         for key in QUESTIONS:
             rec[key] = _value(row, key, cols)
+        rec["src"] = rec.get("src") or "direct"
         out.append(rec)
     return out
 
 
 def missing_columns(path: Path) -> list:
-    """Questions the importer could not find in this CSV (checked on every run)."""
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        headers = next(csv.reader(f))
+    """Questions the importer could not find in this export (checked on every run)."""
+    headers, _ = load_table(Path(path))
     cols = _columns(headers)
     return [k for k, v in cols.items() if not v and k != "src"]
