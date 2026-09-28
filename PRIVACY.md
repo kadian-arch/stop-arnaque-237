@@ -1,6 +1,6 @@
 # Stop Arnaque 237: Privacy notice
 
-Last updated: 26/09/2026
+Last updated: 28/09/2026
 
 ## Who runs this
 Stop Arnaque 237 is an independent project by Kum Donalsien Akwo, a cybersecurity engineer in Buea, Cameroon.
@@ -39,7 +39,7 @@ Only anonymized reports, as an open dataset under the Creative Commons Attributi
 
 # Stop Arnaque 237 : Politique de confidentialité
 
-Dernière mise à jour : 26/09/2026
+Dernière mise à jour : 28/09/2026
 
 **Qui sommes-nous :** un projet indépendant de Kum Donalsien Akwo, ingénieur en cybersécurité à Buea. Contact : groundtruth.cm@gmail.com
 
