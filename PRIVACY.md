@@ -4,7 +4,7 @@ Last updated: 26/09/2026
 
 ## Who runs this
 Stop Arnaque 237 is an independent project by Kum Donalsien Akwo, a cybersecurity engineer in Buea, Cameroon.
-Contact: groundtruth.cm@gmail.comm
+Contact: groundtruth.cm@gmail.com
 
 ## Why we collect reports
 To build an open dataset of real scams in Cameroon, and free tools that warn people before they lose money.
@@ -31,11 +31,9 @@ Only anonymized reports, as an open dataset under the Creative Commons Attributi
 
 ## Your choices
 - Everything except the two consent boxes is optional.
-- You may ask us to delete your report at any time before publication. Write to [PROJECT EMAIL] with the date you submitted and a few words from your report. After publication, we remove it from the next version of the dataset.
+- You may ask us to delete your report at any time before publication. Write to groundtruth.cm@gmail.com with the date you submitted and a few words from your report. After publication, we remove it from the next version of the dataset.
 - You must be 18 or older to submit.
 
-## Changes
-If this notice changes, the date at the top changes too.
 
 ---
 
@@ -65,5 +63,5 @@ Dernière mise à jour : 26/09/2026
 
 **Vos choix :**
 - Tout est facultatif sauf les deux cases de consentement.
-- Vous pouvez demander la suppression de votre signalement à tout moment en écrivant à [PROJECT EMAIL].
+- Vous pouvez demander la suppression de votre signalement à tout moment en écrivant à groundtruth.cm@gmail.com.
 - Il faut avoir 18 ans ou plus.
