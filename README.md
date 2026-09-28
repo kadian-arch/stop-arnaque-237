@@ -4,7 +4,7 @@ An open dataset of real scam messages, calls and schemes reported by people in C
 
 **Status:** collecting reports. First public release planned for October 2026.
 
-**Share a scam you received (3 minutes, anonymous):** [FORM LINK]
+**Share a scam you received (3 minutes, anonymous):** https://tally.so/r/eq4dzJ
 
 ## What will be in it
 Anonymized reports only:
