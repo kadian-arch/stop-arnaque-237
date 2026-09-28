@@ -1,0 +1,33 @@
+# --- private data: never public ---
+raw/
+_work/
+exports/
+*.xlsx
+*.xls
+
+# --- secrets ---
+.env
+.env.*
+!.env.example
+secrets/
+*.key
+*.pem
+*.p12
+pipeline/.pseudonym_key*
+pipeline/secrets/
+
+# --- python / tooling ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+*.log
+
+# --- OS / editor junk ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+~$*
