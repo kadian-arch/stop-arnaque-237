@@ -4,6 +4,8 @@ _work/
 exports/
 *.xlsx
 *.xls
+release/dev/
+release/test/
 
 # --- secrets ---
 .env

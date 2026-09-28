@@ -3,7 +3,7 @@
 Last updated: 28/09/2026
 
 ## Who runs this
-Stop Arnaque 237 is an independent project by Kum Donalsien Akwo, a cybersecurity engineer in Buea, Cameroon.
+Stop Arnaque 237 is an independent project by Donalsien A., a cybersecurity engineer in Buea, Cameroon.
 Contact: groundtruth.cm@gmail.com
 
 ## Why we collect reports
