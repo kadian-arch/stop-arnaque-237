@@ -40,7 +40,7 @@ def _key():
 # separators: space . - between groups.
 _SEP = r"[ .\-]?"
 CM_PHONE = re.compile(  # not followed by a currency: "200 000 000 FCFA" is an amount
-    r"(?<![\d\w+])(?:(?:\+|00)?237" + _SEP + r")?([26](?:" + _SEP + r"\d){8})(?!\d)(?!\s*(?:f?cfa|xaf|francs?|frs)\b)",
+    r"(?<![\d\w+])(?:\(?(?:\+|00)?237\)?\+?" + _SEP + r")?([26](?:" + _SEP + r"\d){8})(?!\d)(?!\s*(?:f?cfa|xaf|francs?|frs)\b)",
     re.I,
 )
 # other international numbers (+234..., +33..., etc.)

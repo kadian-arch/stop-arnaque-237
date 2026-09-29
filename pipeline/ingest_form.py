@@ -52,6 +52,15 @@ def _columns(headers):
     cols = {k: [] for k in QUESTIONS}
     for h in headers:
         n = _norm(h)
+        # Google Sheets integration: a checkbox block with no title comes out as
+        # "Untitled checkboxes field (<option>)", so the option is the question
+        u = re.match(r"untitled [a-z ]*field \((.*)\)$", n)
+        if u:
+            for key, (prefix, kind, _) in QUESTIONS.items():
+                if kind == "flag" and u.group(1).startswith(prefix):
+                    cols[key].append((h, None))
+                    break
+            continue
         for key, (prefix, _, _) in QUESTIONS.items():
             if key == "src":
                 if n == "src":

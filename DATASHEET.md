@@ -36,9 +36,9 @@ All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
 **Reports:** an anonymous bilingual (English/French) form on Tally, shared on WhatsApp and Facebook from September 2026. Respondents must confirm they are 18 or older and agree to open publication of their anonymized report. The form never asks for names, PINs, codes, balances or ID documents. The `src_channel` field records which link a report came through (group, status, dm, fb).
 
-**Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus warnings from Orange Cameroun, MINPOSTEL and Cameroonian and regional news sites on mobile money tricks, fake utility agents, WhatsApp account takeovers, loan apps, Ponzi schemes and romance scams. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every alert links to its source.
+**Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus warnings from Orange Cameroun, MTN Cameroon, MINPOSTEL, Cameroon Tribune, Investir au Cameroun, Journal du Cameroun and other Cameroonian and regional news sites on mobile money tricks (fake credit SMS, fake agents, one-time code theft, withdrawal prompts, fake apps), online tontines, fake ticket sites, fake utility agents, WhatsApp account takeovers, loan apps, Ponzi schemes and romance scams. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every alert links to its source.
 
-**Time frame:** public alerts from March 2020. Reports describe scams from any date, bucketed by the respondent (`when`).
+**Time frame:** public alerts from 2008 to 2026, most from 2020 onward. Reports describe scams from any date, bucketed by the respondent (`when`).
 
 ## Anonymization
 
@@ -52,6 +52,7 @@ Applied by `pipeline/anonymize.py` before anything is written to a release:
 - **Amounts** are kept.
 - **Screenshots** are never released. Their text is read with OCR, anonymized, and checked by hand.
 - **Emails left for the public report** are stored separately and never released.
+- **Last check:** after writing a release, the build scans every file for a raw mobile number, an email address or a private upload link, and stops if it finds one.
 
 ## Preprocessing and labels
 

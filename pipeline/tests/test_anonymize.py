@@ -33,6 +33,26 @@ class Phones(unittest.TestCase):
     def test_foreign_number(self):
         self.assertIn("[PHONE:intl-", A.anonymize_text("WhatsApp +234 803 555 1234"))
 
+    def test_odd_prefixes(self):
+        # seen in a real Orange promo scam SMS: "<<237+691105214>>"
+        for t in ("<<237+691105214>>", "(+237) 691 10 52 14", "00237691105214"):
+            out = A.anonymize_text(t)
+            self.assertNotRegex(out, r"691\s?10", t)
+            self.assertIn("[PHONE:691-", out)
+
+
+class LeakScan(unittest.TestCase):
+    def test_catches_raw_data_but_not_tokens(self):
+        import tempfile
+        from pathlib import Path
+        from pipeline.build import leak_scan
+        d = Path(tempfile.mkdtemp())
+        (d / "ok.csv").write_text("[PHONE:677-123456],677-123456,[EMAIL@gmail.com],25 000 FCFA\n", encoding="utf-8")
+        self.assertEqual(leak_scan(d), [])
+        (d / "bad.jsonl").write_text('{"t": "call 677 12 34 56 or a@b.com https://storage.tally.so/x"}\n', encoding="utf-8")
+        kinds = {h.split()[1] for h in leak_scan(d)}
+        self.assertEqual(kinds, {"phone:", "email:", "private_file:"})
+
 
 class Names(unittest.TestCase):
     def test_operator_style_name_before_number(self):

@@ -74,6 +74,24 @@ class PerOption(unittest.TestCase):
         self.assertEqual(r["scam_types"], ["wrong_number_reversal"])
         self.assertEqual(r["caller_asked"], ["dial_code"])
 
+    def test_google_sheets_untitled_consent(self):
+        # the Sheets integration names titleless checkbox blocks "Untitled checkboxes field (...)"
+        row = {k: v for k, v in BASE.items() if not k.startswith(("I am 18", "I agree"))}
+        row["Untitled checkboxes field"] = "I am 18 or older / J'ai 18 ans ou plus"
+        row["Untitled checkboxes field (I am 18 or older / J'ai 18 ans ou plus)"] = "TRUE"
+        row["Untitled checkboxes field (I agree that my report, with names removed, can be published. / J'accepte ...)"] = "TRUE"
+        path = write([row], list(row))
+        self.assertNotIn("consent", missing_columns(path))
+        r = read_tally_csv(path)[0]
+        self.assertTrue(r["consent"] and r["age_ok"])
+
+    def test_untitled_consent_unticked(self):
+        row = {k: v for k, v in BASE.items() if not k.startswith(("I am 18", "I agree"))}
+        row["Untitled checkboxes field (I am 18 or older / J'ai 18 ans ou plus)"] = "TRUE"
+        row["Untitled checkboxes field (I agree that my report ... / J'accepte ...)"] = "FALSE"
+        r = read_tally_csv(write([row], list(row)))[0]
+        self.assertFalse(r["consent"])
+
     def test_reports_missing_columns(self):
         path = write([{"Submission ID": "x"}], ["Submission ID"])
         self.assertIn("scam_types", missing_columns(path))

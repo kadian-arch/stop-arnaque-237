@@ -36,26 +36,26 @@ Details in [PRIVACY.md](PRIVACY.md) and [DATASHEET.md](DATASHEET.md#anonymizatio
 Everything from the raw form export to a release is one command, so every release can be rebuilt and checked.
 
 ```bash
-python -m pipeline test                    # 36 tests: anonymization, form import, file types, end-to-end privacy check
+python -m pipeline test                    # 40 tests: anonymization, form import, file types, end-to-end privacy check
 python -m pipeline build --version v1.0    # raw/ -> release/v1.0/
 python -m pipeline.harvest                 # re-download the public alert sources
 ```
 
 | Module | Job |
 |---|---|
-| `pipeline/ingest_form.py` | reads the Tally export: CSV (either column layout, even re-saved by Excel) or XLSX |
+| `pipeline/ingest_form.py` | reads the Tally export: CSV (either column layout, even re-saved by Excel), XLSX, or the Google Sheets copy |
 | `pipeline/attachments.py` | handles any upload: screenshots (long ones are sliced), PDFs, voice notes, videos |
 | `pipeline/ocr.py` | reads screenshot text with the OCR built into Windows (English + French) |
 | `pipeline/lang.py` | tags each message en / fr / pidgin / mixed |
 | `pipeline/anonymize.py` | phones, names, IDs, emails, links |
-| `pipeline/build.py` | merge, anonymize, link repeated messages and numbers, export, stats, review queue |
+| `pipeline/build.py` | merge, anonymize, link repeated messages and numbers, export, stats, review queue; the build fails if any raw number, email or private link is left in the output |
 | `pipeline/harvest.py` | public sources |
 
 Python 3.10+ and `requests`, `lxml`. Raw inputs live in `raw/`, which is never committed.
 
 ## Sources for public alerts
 
-StopBlaBlaCam (E-SCAM), 237 Check, PesaCheck and the Ministry of Finance, plus warnings from Orange Cameroun, MINPOSTEL and Cameroonian and regional news sites (the `source` field of each alert names it). Summaries are written by this project, and each alert links to its original article. Where a source quotes the scam message itself, it's kept in `example_message` (anonymized).
+StopBlaBlaCam (E-SCAM), 237 Check, PesaCheck and the Ministry of Finance, plus warnings from Orange Cameroun, MTN Cameroon, MINPOSTEL, Cameroon Tribune and other Cameroonian and regional news sites (the `source` field of each alert names it). Summaries are written by this project, and each alert links to its original article. Where a source quotes the scam message itself, it's kept in `example_message` (anonymized).
 
 ## Licence
 

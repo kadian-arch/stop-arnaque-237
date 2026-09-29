@@ -263,8 +263,10 @@ def build_reports(log, with_screens=True):
             reasons.append("many_types: maybe several scams in one report, split with overrides if so")
         if rec["amount_lost_fcfa"] and rec["amount_lost_fcfa"] > 50_000_000:
             reasons.append("amount_check: very large amount, typo?")
-        if re.search(r"(?i)\b(test|testing|essai)\b", " ".join(filter(None, [pasted, r.get("extra_notes")]))) and len(pasted) < 40:
+        if re.search(r"(?i)\b(test|testing|essai|lorem|ipsum|asdf|qwerty)\b", " ".join(filter(None, [pasted, r.get("extra_notes")]))) and len(pasted) < 40:
             reasons.append("maybe_test_submission")
+        elif re.search(r"(?i)^\W*(n/?a|none|nothing|rien|aucun|pas encore|no message|i don'?t have\b.*|je n'?ai pas\b.*)\W*$", pasted or ""):
+            reasons.append("placeholder_text: the paste box says there is no message, blank it with an override")
         if reasons and not ov.get("reviewed"):
             review.append({"key": key, "id": rec["id"], "reasons": " | ".join(reasons),
                            "files": ";".join(str(p) for p in r.get("_files", [])),
@@ -386,6 +388,27 @@ def stats(reports, alerts, dropped, total_rows):
     }
 
 
+LEAKS = {
+    "phone": re.compile(r"(?<![\d:\-])(?!6\d\d-[0-9a-f]{6}(?![0-9a-f]))(?:\+|00)?(?:237\+?[ .\-]?)?6[5-9](?:[ .\-]?\d){7}(?!\d)"),
+    "email": re.compile(r"(?<![\w.+\-\[])[\w.+\-]+@[\w\-]+\.[a-z]{2,}", re.I),
+    "private_file": re.compile(r"storage\.tally\.so|accessToken=", re.I),
+}
+
+
+def leak_scan(out: Path) -> list:
+    """Last check on the written release: any raw mobile number, email or private
+    upload link left over is a bug in anonymization, so the build fails."""
+    hits = []
+    for f in sorted(out.iterdir()):
+        if f.suffix not in (".jsonl", ".csv", ".json"):
+            continue
+        for n, line in enumerate(f.read_text(encoding="utf-8-sig").splitlines(), 1):
+            for kind, rx in LEAKS.items():
+                for m in rx.finditer(line):
+                    hits.append(f"{f.name}:{n} {kind}: {m.group(0)}")
+    return hits
+
+
 def build(version="dev", with_screens=True):
     log = []
     reports, review, subscribers, dropped, total = build_reports(log, with_screens)
@@ -401,6 +424,9 @@ def build(version="dev", with_screens=True):
         w.writerows(nums)
     st = stats(reports, alerts, dropped, total)
     (out / "stats.json").write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
+    leaks = leak_scan(out)
+    if leaks:
+        raise RuntimeError("possible personal data in release, nothing may be published:\n" + "\n".join(leaks[:20]))
 
     RAW.mkdir(exist_ok=True)
     with open(RAW / "review_queue.csv", "w", newline="", encoding="utf-8-sig") as f:
