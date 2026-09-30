@@ -35,7 +35,7 @@ RELEASE = ROOT / "release"
 EVERYDAY_MOMO = {"wrong_number_reversal", "deposit_withdrawal_trap", "account_blocked", "credential_request", "sim_swap"}
 
 REPORT_FIELDS = [
-    "id", "record_type", "source", "submitted_month", "when", "channel", "scam_types",
+    "id", "record_type", "source", "submitted_month", "when", "channel", "scam_types", "multi_scam",
     "message_text", "text_origin", "message_language", "screenshot_text", "has_screenshot", "attachment_kinds", "sender", "sender_type", "sender_phone_id",
     "phone_ids", "domains", "caller_claimed", "caller_asked", "call_language", "call_end", "call_description",
     "outcome", "amount_lost_fcfa", "payment_rails", "actions_after", "region", "extra_notes",
@@ -182,6 +182,9 @@ def build_reports(log, with_screens=True):
             subscribers.append(email.lower())
 
         pasted = (r.get("message_text") or "").strip()
+        placeholder = bool(PLACEHOLDER.match(pasted))
+        if placeholder:  # "I deleted it", "I don't have it": not a scam message, never release as one
+            pasted = ""
         ocr = (r.get("_ocr") or "").strip()
         raw_text = ov.get("message_text") or pasted or ocr
         origin = "reviewed" if ov.get("message_text") else ("pasted" if pasted else ("screenshot" if ocr else None))
@@ -212,6 +215,8 @@ def build_reports(log, with_screens=True):
             "when": r.get("when"),
             "channel": ov.get("channel", r.get("channel")),
             "scam_types": ov.get("scam_types", r.get("scam_types") or []),
+            # 4+ types ticked usually means the person listed every scam they have met, not one incident
+            "multi_scam": ov.get("multi_scam", len(ov.get("scam_types", r.get("scam_types") or [])) >= 4),
             "message_text": text or None,
             "text_origin": origin,
             "message_language": ov.get("message_language") or lang.detect(raw_text),
@@ -260,13 +265,13 @@ def build_reports(log, with_screens=True):
         if not rec["scam_types"] or rec["scam_types"] == ["other"]:
             reasons.append("scam_type_other: set the real type from the text")
         if len(rec["scam_types"]) >= 4:
-            reasons.append("many_types: maybe several scams in one report, split with overrides if so")
+            reasons.append("many_types: released with multi_scam=true; split with overrides only if the text tells the incidents apart")
         if rec["amount_lost_fcfa"] and rec["amount_lost_fcfa"] > 50_000_000:
             reasons.append("amount_check: very large amount, typo?")
         if re.search(r"(?i)\b(test|testing|essai|lorem|ipsum|asdf|qwerty)\b", " ".join(filter(None, [pasted, r.get("extra_notes")]))) and len(pasted) < 40:
             reasons.append("maybe_test_submission")
-        elif re.search(r"(?i)^\W*(n/?a|none|nothing|rien|aucun|pas encore|no message|i don'?t have\b.*|je n'?ai pas\b.*)\W*$", pasted or ""):
-            reasons.append("placeholder_text: the paste box says there is no message, blank it with an override")
+        if placeholder:
+            reasons.append("placeholder_text: paste box said there is no message; left out of message_text")
         if reasons and not ov.get("reviewed"):
             review.append({"key": key, "id": rec["id"], "reasons": " | ".join(reasons),
                            "files": ";".join(str(p) for p in r.get("_files", [])),
@@ -393,6 +398,12 @@ LEAKS = {
     "email": re.compile(r"(?<![\w.+\-\[])[\w.+\-]+@[\w\-]+\.[a-z]{2,}", re.I),
     "private_file": re.compile(r"storage\.tally\.so|accessToken=", re.I),
 }
+
+
+PLACEHOLDER = re.compile(
+    r"(?i)^\W*(n/?a|none|nothing|rien|aucun|pas encore|no message"
+    r"|i (?:don'?t|do not|no longer) have\b.*|i deleted\b.*|i (?:can'?t|cannot) (?:find|remember)\b.*"
+    r"|je n'?ai (?:pas|plus)\b.*|j'ai (?:supprim|effac)\w*\b.*)\W*$")
 
 
 def leak_scan(out: Path) -> list:

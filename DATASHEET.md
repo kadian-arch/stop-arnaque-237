@@ -28,7 +28,9 @@ Each comes as `.jsonl` and `.csv` (list fields joined with `|`).
 
 All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
-**Is anything missing?** Most form questions are optional, so many reports have empty fields. Public alerts only describe what the source article states.
+**`multi_scam`:** the form says "tick all that apply", and many people ticked every kind of scam they have ever met rather than the one they were reporting. When 4 or more types are ticked, `multi_scam` is true: treat those labels as the person's experience, not as one incident. For training a classifier on single messages, use rows where it is false.
+
+**Is anything missing?** Most form questions are optional, so many reports have empty fields. Many people no longer had the message; answers like "I deleted it" are left out of `message_text`. Public alerts only describe what the source article states.
 
 **Is there sensitive data?** The raw inputs contain phone numbers, names and screenshots. None of these are released. See Anonymization.
 
