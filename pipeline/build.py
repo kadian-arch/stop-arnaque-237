@@ -451,6 +451,7 @@ def leak_scan(out: Path) -> list:
             # dates, times and our own pseudonym codes are digits but not personal data
             line = re.sub(r"\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?", "DATE", line)
             line = re.sub(r"(?i)h(?:tt|xx)ps?://[^\s\",|]+", "URL", line)  # article ids in source links
+            line = re.sub(r"\b(?:19|20)\d\d\s?[-/–]\s?(?:19|20)\d\d\b", "YEARS", line)  # "2024-2025"
             line = re.sub(r"(?<![\w-])(?:\d{3}|intl)-[0-9a-f]{6}(?![0-9a-f])", "TOKEN", line)
             for num in A.OFFICIAL:  # public operator numbers are kept on purpose
                 line = re.sub(r"(?:\+?237[ .\-]?)?" + r"[ .\-]?".join(num), "OFFICIAL", line)

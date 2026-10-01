@@ -19,6 +19,8 @@ def main():
     a = p.parse_args()
 
     if a.cmd == "test":
+        import os
+        os.environ.setdefault("STOPARNAQUE_ALLOW_NEW_KEY", "1")  # a fresh clone has no key; tests may make a throwaway one
         root = Path(__file__).resolve().parent.parent
         suite = unittest.defaultTestLoader.discover(str(root / "pipeline" / "tests"), top_level_dir=str(root))
         sys.exit(0 if unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful() else 1)

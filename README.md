@@ -68,6 +68,10 @@ StopBlaBlaCam (E-SCAM), 237 Check, PesaCheck and the Ministry of Finance, plus w
 
 Data: [CC BY 4.0](LICENSE-DATA.md). Code: [MIT](LICENSE).
 
+## Contributing
+
+Report a scam through the form, or see [CONTRIBUTING.md](CONTRIBUTING.md) for code and documentation changes.
+
 ## Contact
 
 Kum Donalsien Akwo, groundtruth.cm@gmail.com

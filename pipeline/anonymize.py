@@ -11,6 +11,7 @@ Personal names -> [NAME]              the rules below, plus manual review before
 Amounts        -> kept as is (decision 2026-09-26)
 """
 import hashlib
+import os
 import hmac
 import re
 import secrets
@@ -21,6 +22,9 @@ KEY_FILE = Path(__file__).with_name(".pseudonym_key")
 
 def load_key() -> bytes:
     if not KEY_FILE.exists():
+        # a new key would give every number a different code, so only tests may create one
+        if not os.environ.get("STOPARNAQUE_ALLOW_NEW_KEY"):
+            raise SystemExit(f"Missing {KEY_FILE.name}: restore it from the password manager (never create a new one).")
         KEY_FILE.write_text(secrets.token_hex(32))
     return bytes.fromhex(KEY_FILE.read_text().strip())
 
