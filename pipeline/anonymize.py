@@ -73,6 +73,7 @@ OFFICIAL = {
     "650528787",                            # MTN MoMo WhatsApp
     "698717171",                            # Orange Money anti-scam WhatsApp
     "690009500", "690009300", "690009200",  # Orange Money service lines
+    "670362187",                            # MTN MoMo POS chatbot (wa.me link in MTN's own SMS)
 }
 
 
@@ -100,7 +101,20 @@ def extract_phones(text: str) -> list:
 TXN = re.compile(r"(?<![\d])\d{10,19}(?![\d])")
 TXN_LABELED = re.compile(r"(?i)(transaction\s*(?:id|ref)[^:]*:\s*|txn\s*id\s*:\s*|r[ée]f(?:[ée]rence)?\s*:\s*)([A-Z0-9_\-]{6,})")
 ACCOUNT = re.compile(r"(?i)((?:mobile money account|account(?: number| no\.?)?|compte)\s*:?\s*(?:FRI:)?)\d{6,12}")
-OTP = re.compile(r"(?i)((?:following code|your code is|verification code|code de (?:confirmation|v[ée]rification)|votre code est)\s*:?\s*)\d{4,8}\b")
+# Names of people who contributed their own messages (they appear in "Congratulations <NAME>").
+# Private list, one name per line, in raw/names_to_mask.txt; never committed.
+_NAMES_FILE = Path(__file__).resolve().parent.parent / "raw" / "names_to_mask.txt"
+EXTRA_NAMES = sorted({w.strip() for w in _NAMES_FILE.read_text(encoding="utf-8").splitlines() if len(w.strip()) >= 3},
+                     key=len, reverse=True) if _NAMES_FILE.exists() else []
+
+# one-time codes: the value must contain a digit, so ordinary words are never touched
+OTP = re.compile(r"(?i)((?:following code|(?:your\s+)?(?:[\w.]+\s+){0,3}code\s+is|verification code(?:\s+is)?|code de (?:confirmation|v[ée]rification)|votre code est|OTP(?:\s+for\s+[\w ]{2,30})?\s+is|with code|le num[ée]ro|enter the number|(?:your\s+)?[\w.]+\s+code\s*:)\s*:?\s*)(?=[\w•.\-]*\d)[A-Za-z0-9][\w•.\-]{2,11}\b")
+# the code written before the phrase: "G-597W is your Google verification code", "1234 is your Link verification code"
+OTP_BEFORE = re.compile(r"(?i)(?<![\w\[])(?=[\w•*.\-]*\d)[\w•*.\-]{3,12}(?=\s*(?:'?s|is)\s+your\s+[\w ]{0,25}code\b)")
+# credentials sent by subscription services: "LOGIN : 06... PASS : 863353"
+CRED = re.compile(r"(?i)\b((?:PASS(?:WORD)?|mot de passe|LOGIN|identifiant|username)\s*:\s*|(?:gives? access to|donne acc[eè]s [àa])\s+(?:your|votre)\s+[\w ]{0,20}(?:account|compte)\s*:?\s*)\S{3,60}")
+# identity documents and applications: "Passport #AB502...", "application #PO-2026..."
+DOC_ID = re.compile(r"(?i)\b((?:passport|passeport|application|demande|carte|card|CNI|r[ée]c[ée]piss[ée])\s*(?:n[o°]\.?|#)\s*)[A-Z0-9][\w•\-/]{3,}")
 # safety net: a number cut off by the screen edge, or any other 8-9 digit number that is not an amount
 LONGNUM = re.compile(r"(?<![\w\[:\-])\(?\+?\d{6,}(?:\.\.\.|…)|(?<![\w\[:\-.,])\d{8,9}(?![\d.,])(?!\s*(?:f?cfa|xaf|francs?|frs)\b)", re.I)
 EMAIL = re.compile(r"(?i)\b[\w.+\-]+@([\w\-]+(?:\.[\w\-]+)+)\b")
@@ -135,13 +149,15 @@ NAME_BEFORE_PHONE = re.compile(r"\b([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]*(?:\s+[A-ZÀ-Ý][
 NAME_IN_PARENS = re.compile(r"(\(\s*\+?237\s*[26]\d{8})\s+[A-Za-zÀ-ÿ][^()\n]*\)")
 # Operator messages: "of|to|from|by|via agent: <anything> (2376...)". The whole counterparty goes,
 # because agents print shop and business names that point to the person running them.
-COUNTERPARTY = re.compile(r"\b((?:of|to|from|by|agent:))\s+(?!\[)((?:(?!\b(?:of|to|from|by)\s)[^()\[\]\n]){2,140}?)\s*(?=\(\s*\+?237\s*[26]\d)")
+COUNTERPARTY = re.compile(r"\b((?:of|to|from|by|agent:|de|à|a|par|agent\s*:))\s+(?!\[)((?:(?!\b(?:of|to|from|by|de|à|par)\s)[^()\[\]]){2,140}?)\s*(?=\(\s*\+?237\s*[26]\d)")
 # "You Stephene Entum Tibung (2376...) have via agent"
 NAME_AFTER_YOU = re.compile(r"\b(You)\s+(?:[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]*\s+){1,5}(?=\(\s*\+?237)")
 NAME_AFTER_CUE = re.compile(
     r"((?i:\b(?:from|to|by|at|de|à|par|chez|mr\.?|mrs\.?|mme\.?|m\.|dr\.?|madame|monsieur|name is|je m'appelle|my name is|i am|je suis))\s+)"
     r"((?:[A-ZÀ-Ý][a-zà-ÿ'\-]+|[A-ZÀ-Ý]{2,}[A-ZÀ-Ý'\-]*)(?:\s+(?:[A-ZÀ-Ý][a-zà-ÿ'\-]+|[A-ZÀ-Ý]{2,}[A-ZÀ-Ý'\-]*)){1,5})"
 )
+GREETING_NAME = re.compile(r"\b((?:Congratulations|Congrats|Dear|F[ée]licitations|Cher|Ch[èe]re|Hello|Bonjour|Hi)\s+)([A-ZÀ-Ý]{2,}(?:\s+[A-ZÀ-Ý]{2,}){0,3})(?![a-zà-ÿ])")
+LEADING_NAME = re.compile(r"^([A-ZÀ-Ý]{2,}(?:\s+[A-ZÀ-Ý]{2,}){1,3})(?=\s*,)")
 # Words that look like names but are organisations, places or product names we keep.
 KEEP = {
     "MTN", "ORANGE", "MOMO", "MOBILE", "MONEY", "CAMEROON", "CAMEROUN", "XAF", "FCFA", "CFA", "MTNC",
@@ -152,6 +168,8 @@ KEEP = {
     "NGAOUNDERE", "NGAOUNDÉRÉ", "BERTOUA", "EBOLOWA", "KRIBI", "KUMBA", "TIKO",
     # merchants seen in genuine operator messages (businesses, not people)
     "ENNOVATIVE", "GAMING", "LEEDTECH", "LTD", "BETPAWA",
+    # words operators put in capitals after a greeting
+    "CUSTOMER", "CLIENT", "AGENT", "ABONNE", "ABONNÉ", "SUBSCRIBER", "PARTNER", "ALL", "TOUS",
 }
 
 
@@ -160,32 +178,43 @@ def _is_kept(phrase: str) -> bool:
     return all(w in KEEP for w in words) or any(w in KEEP for w in words[:1]) and len(words) <= 2
 
 
-def scrub_names(text: str) -> str:
+def scrub_names(text: str, cue_names: bool = True) -> str:
     def before_phone(m):
         return m.group(0) if _is_kept(m.group(1)) else "[NAME] "
     text = NAME_IN_PARENS.sub(lambda m: m.group(1) + " [NAME])", text)
     text = COUNTERPARTY.sub(lambda m: m.group(0) if _is_kept(m.group(2)) else f"{m.group(1)} [NAME] ", text)
     text = NAME_AFTER_YOU.sub(lambda m: m.group(1) + " [NAME] ", text)
     text = NAME_BEFORE_PHONE.sub(before_phone, text)
+    # operators greet people by name in capitals: "Congratulations JOHN DOE Your...", "JOHN DOE, We have a surprise"
+    text = GREETING_NAME.sub(lambda m: m.group(0) if _is_kept(m.group(2)) else m.group(1) + "[NAME]", text)
+    text = LEADING_NAME.sub(lambda m: m.group(0) if _is_kept(m.group(1)) else "[NAME]", text)
 
     def after_cue(m):
         return m.group(0) if _is_kept(m.group(2)) else m.group(1) + "[NAME]"
-    return NAME_AFTER_CUE.sub(after_cue, text)
+    return NAME_AFTER_CUE.sub(after_cue, text) if cue_names else text
 
 
 # ---------- main entry ----------
-def anonymize_text(text):
+def anonymize_text(text, cue_names: bool = True):
+    """cue_names=False skips the "from/to/at <Capitalised Words>" guess. Official operator messages
+    only name people in fixed formats (before a number, after "Congratulations"), and the guess
+    there hits product names like "Yamo Class"."""
     if not text:
         return text
     t = str(text)
     t = TXN_LABELED.sub(lambda m: m.group(1) + "[TXN_ID]", t)
-    t = scrub_names(t)                 # before phones: the name cue uses the phone as anchor
+    t = scrub_names(t, cue_names)      # before phones: the name cue uses the phone as anchor
     t = INTL_PHONE.sub(lambda m: phone_token(m.group(0)), t)
     t = NANP_PHONE.sub(lambda m: phone_token("+1" + m.group(0)), t)
     t = CM_PHONE.sub(lambda m: phone_token(m.group(0)), t)
     t = TXN.sub("[TXN_ID]", t)
     t = ACCOUNT.sub(lambda m: m.group(1) + "[ACCOUNT]", t)
     t = OTP.sub(lambda m: m.group(1) + "[CODE]", t)
+    t = OTP_BEFORE.sub("[CODE]", t)
+    t = CRED.sub(lambda m: m.group(1) + "[CREDENTIAL]", t)
+    t = DOC_ID.sub(lambda m: m.group(1) + "[ID]", t)
+    for name in EXTRA_NAMES:
+        t = re.sub(r"(?i)\b" + re.escape(name) + r"\b", "[NAME]", t)
     t = LONGNUM.sub("[NUMBER]", t)
     t = EMAIL.sub(lambda m: f"[EMAIL@{m.group(1).lower()}]", t)
     t = URL.sub(lambda m: defang(m.group(1)), t)

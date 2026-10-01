@@ -5,7 +5,8 @@ documentation and the data cannot drift apart.
 """
 from . import taxonomy as T
 
-GENUINE_KINDS = ["money_received", "money_sent", "agent_cash_in", "agent_cash_out", "agent_withdrawal",
+GENUINE_KINDS = ["money_received", "money_sent", "agent_cash_in", "agent_cash_out", "agent_withdrawal", "loan_offer", "agent_info",
+                 "service_subscription", "account_notice", "security_tip", "bank_alert", "government_notice",
                  "merchant_debit", "bill_payment", "loan_advance", "loan_repayment", "otp_code", "promo", "other"]
 
 V = {  # allowed values (lists may be empty; None is always allowed)
@@ -16,7 +17,7 @@ V = {  # allowed values (lists may be empty; None is always allowed)
     "outcome": T.OUTCOMES, "payment_rails": T.PAYMENT_RAILS, "actions_after": sorted(set(T.FORM_AFTER.values())),
     "region": T.REGIONS, "when": sorted(set(T.FORM_WHEN.values())), "would_use_tool": ["yes", "maybe", "no"],
     "text_origin": ["pasted", "screenshot", "reviewed"], "message_kind": GENUINE_KINDS,
-    "operator": ["mtn", "orange", "camtel", "nexttel", "bank", "unknown"],
+    "operator": ["mtn", "orange", "camtel", "nexttel", "bank", "government", "online_service", "partner_brand", "unknown"],
     "line_type": ["consumer", "merchant_agent", "unknown"], "label": ["not_scam"],
 }
 
@@ -79,7 +80,7 @@ DOC = {
         "id": "Stable id of the message (G-...).",
         "record_type": "Always 'genuine_message'.",
         "label": "Always 'not_scam'.",
-        "operator": "Operator that sent it: mtn, orange, camtel...",
+        "operator": "Who sent it: mtn, orange, camtel, a bank, a government service, an online service (verification codes), or a brand advertising through the operator (partner_brand).",
         "sender_shown": "Sender name displayed on the phone (e.g. 'Mobile Money').",
         "line_type": "consumer (personal line) or merchant_agent (shop or agent line).",
         "message_kind": "What the message is: money received or sent, cash-in, cash-out, bundle or merchant payment, loan advance or repayment, login code, promo.",

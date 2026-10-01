@@ -41,6 +41,30 @@ class Phones(unittest.TestCase):
             self.assertIn("[PHONE:691-", out)
 
 
+class FrenchCounterparty(unittest.TestCase):
+    def test_name_after_de_and_a(self):
+        for t in ("Vous avez recu 69500 XAF de N A City embolo asanga (237670000001) sur votre compte",
+                  "Vous avez transféré 5000 FCFA à JEAN TEST NOM (237670000002) depuis votre compte"):
+            out = A.anonymize_text(t)
+            self.assertIn("[NAME] ([PHONE:", out)
+            self.assertNotRegex(out, r"embolo|JEAN|NOM")
+
+
+class CodesAndCredentials(unittest.TestCase):
+    def test_codes_masked_words_kept(self):
+        cases = {
+            "G-597W is your Google verification code.": "[CODE] is your Google",
+            "The OTP for UBA Mobile Banking is 93714051.": "is [CODE].",
+            "Veuillez entrer le numéro 749463 pour continuer": "numéro [CODE]",
+            "LOGIN : 0670000001 PASS : 863353": "LOGIN : [CREDENTIAL] PASS : [CREDENTIAL]",
+            "This confidential code gives access to your MoMo account:lQbJJNJMQ2VNi": "account:[CREDENTIAL]",
+            "Passport #AB502123 is ready": "Passport #[ID]",
+        }
+        for raw, expected in cases.items():
+            self.assertIn(expected, A.anonymize_text(raw), raw)
+        self.assertEqual(A.anonymize_text("You must pass the exam. Pass 3 levels."), "You must pass the exam. Pass 3 levels.")
+
+
 class LeakScan(unittest.TestCase):
     def test_catches_raw_data_but_not_tokens(self):
         import tempfile

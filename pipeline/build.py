@@ -218,8 +218,10 @@ def build_reports(log, with_screens=True):
         raw_text = ov.get("message_text") or pasted or ocr
         origin = "reviewed" if ov.get("message_text") else ("pasted" if pasted else ("screenshot" if ocr else None))
         text = A.anonymize_text(raw_text)
-        # once the message is transcribed by hand, the raw OCR (with phone UI clutter) is not released
-        shot_text = A.anonymize_text(ov.get("screenshot_text") or ("" if ov.get("message_text") else ocr)) or None
+        # once the message is reviewed (typed or transcribed and checked against the image),
+        # the raw OCR copy, with phone UI clutter, is not released
+        reviewed_text = ov.get("message_text") or (ov.get("reviewed") and pasted)
+        shot_text = A.anonymize_text(ov.get("screenshot_text") or ("" if reviewed_text else ocr)) or None
 
         sender_raw = (r.get("sender") or "").strip()
         sender_phone = (A.extract_phones(sender_raw) or [None])[0]
@@ -452,6 +454,11 @@ def leak_scan(out: Path) -> list:
             line = re.sub(r"\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?", "DATE", line)
             line = re.sub(r"(?i)h(?:tt|xx)ps?://[^\s\",|]+", "URL", line)  # article ids in source links
             line = re.sub(r"\b(?:19|20)\d\d\s?[-/–]\s?(?:19|20)\d\d\b", "YEARS", line)  # "2024-2025"
+            line = re.sub(r"\b\d{1,2}[./-]\d{1,2}[./-](?:19|20)\d\d\b", "DATE", line)  # "29.07.2026", "27/08/2026"
+            # menu choices: "Réponds 11 12 13 14 15" (consecutive numbers, never a phone number)
+            line = re.sub(r"\b\d{1,2}(?: \d{1,2}){3,}\b",
+                          lambda m: "MENU" if all(int(b) - int(a) == 1 for a, b in zip(m.group(0).split(), m.group(0).split()[1:])) else m.group(0),
+                          line)
             line = re.sub(r"(?<![\w-])(?:\d{3}|intl)-[0-9a-f]{6}(?![0-9a-f])", "TOKEN", line)
             for num in A.OFFICIAL:  # public operator numbers are kept on purpose
                 line = re.sub(r"(?:\+?237[ .\-]?)?" + r"[ .\-]?".join(num), "OFFICIAL", line)

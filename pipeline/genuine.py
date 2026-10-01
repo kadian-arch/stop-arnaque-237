@@ -23,7 +23,10 @@ FIELDS = ["id", "record_type", "label", "operator", "sender_shown", "line_type",
 HEADER = re.compile(r'^\s*From\s*(.*?)\s+on\s+(?:an?\s+)?(.*?)\s*;\s*"?(.*)$', re.I)
 
 KINDS = [  # first match wins
-    ("otp_code", r"code\s*:?\s*\[?\w*\]?.*(?:login|connexion)|following code"),
+    ("otp_code", r"code\s*:?\s*\[?\w*\]?.*(?:login|connexion)|following code|verification code|\botp\b|your [\w ]{0,20}code\s*(?:is|:)|le num[ée]ro .* pour continuer|confidential code"),
+    ("government_notice", r"passport|pré-?enr[oô]lement|pre-enrolment|dgsn|gdns"),
+    ("bank_alert", r"\buba\b|carte .* activ|received cr xaf|mobile banking"),
+    ("security_tip", r"fraud|official .* page|crime|protect your identity|reset your momo pin|never ask"),
     ("loan_advance", r"received an advance"),
     ("loan_repayment", r"has been repaid"),
     ("agent_withdrawal", r"via agent.*withdrawn|withdrawn .* via agent"),
@@ -33,7 +36,11 @@ KINDS = [  # first match wins
     ("money_sent", r"you have transferred"),
     ("bill_payment", r"your payment of"),
     ("merchant_debit", r"a transaction of .* by"),
-    ("promo", r"earn \+|bonus|stand a chance|win|gagn|promo"),
+    ("loan_offer", r"borrow|pay ?back later|advance limit|momokash|xtracash|repay after|debt of|on credit"),
+    ("service_subscription", r"playvod|mtn ?zik|sonnerie|abonnement|desabo|subscription|sauve au|tones?\b"),
+    ("agent_info", r"dear agent|commission|cash-?outs?|qr code|registering a customer|activations?|yello pos|sales and performances"),
+    ("account_notice", r"maintenance|restored|esim|limit has been|compatible|for a more convenient support|customer care hotline|failed|successfully activated|token"),
+    ("promo", r"earn \+|bonus|stand a chance|win|gagn|promo|offered to you|free|gratuit|deposit|installments|offer|bundle|surprise|reduce|level up|yamo|zik|data|\d+U"),
 ]
 
 
@@ -45,8 +52,23 @@ def _kind(t):
     return "other"
 
 
+# who actually sent it, by the sender name shown on the phone
+SENDER_KIND = {
+    "uba": "bank", "afriland": "bank", "ecobank": "bank", "sgc": "bank",
+    "idcam": "government", "passcam": "government", "dgsn": "government",
+    "payoneer": "online_service", "google": "online_service", "zoom": "online_service", "amazon": "online_service",
+    "whatsapp": "online_service", "verify": "online_service", "stripelink": "online_service", "youscribe": "online_service",
+    "tecno": "partner_brand", "infinix": "partner_brand", "eneoprepaid": "partner_brand",
+}
+
+
 def _operator(t, sender):
+    kind = SENDER_KIND.get((sender or "").strip().lower().replace(" ", ""))
+    if kind:
+        return kind
     s = f"{sender} {t}".lower()
+    if "playvod" in s:  # content service billed through the operator
+        return "partner_brand"
     if re.search(r"orange|\bom\b|#150", s):
         return "orange"
     if re.search(r"mtn|momo|mobile ?money|y'ello|\*126", s):
@@ -63,18 +85,24 @@ def _line_type(desc):
     return "unknown"
 
 
+def _network(desc):
+    """'a normal consumer sim (MTN)' -> 'mtn': the line the screenshots came from."""
+    m = re.search(r"\((mtn|orange|camtel|nexttel)\)", desc or "", re.I)
+    return m.group(1).lower() if m else None
+
+
 def parse(text):
-    """-> list of (sender_shown, line_type, raw_message)."""
-    out, sender, ltype = [], None, "unknown"
+    """-> list of (sender_shown, line_type, raw_message, network_of_the_line)."""
+    out, sender, ltype, net = [], None, "unknown", None
     for line in text.splitlines():
         m = HEADER.match(line)
         if m:
             sender = m.group(1).strip() or None
-            ltype = _line_type(m.group(2))
+            ltype, net = _line_type(m.group(2)), _network(m.group(2))
             line = m.group(3)
         msg = line.strip().strip('"').strip()
         if len(msg) >= 15:
-            out.append((sender, ltype, msg))
+            out.append((sender, ltype, msg, net))
     return out
 
 
@@ -88,19 +116,19 @@ def build_genuine(raw: Path, log):
         # one header covers one phone line, so a line whose other messages are clearly MTN
         # (or Orange) is that operator throughout, even for messages that never name it
         by_line = {}
-        for sender, ltype, msg in msgs:
+        for sender, ltype, msg, _ in msgs:
             op = _operator(msg, sender or "")
             if op != "unknown":
                 by_line.setdefault((sender, ltype), op)
-        for sender, ltype, msg in msgs:
-            text = A.anonymize_text(msg)
+        for sender, ltype, msg, net in msgs:
+            text = A.anonymize_text(msg, cue_names=False)
             if text in seen:
                 seen[text]["times_seen"] += 1
                 continue
             seen[text] = {
                 "id": "G-" + hashlib.sha1(text.encode()).hexdigest()[:8],
                 "record_type": "genuine_message", "label": "not_scam",
-                "operator": by_line.get((sender, ltype), "unknown"), "sender_shown": sender or "unknown",
+                "operator": _operator(msg, sender or "") if _operator(msg, sender or "") != "unknown" else by_line.get((sender, ltype), net or "unknown"), "sender_shown": sender or "unknown",
                 "line_type": ltype, "message_kind": _kind(msg), "message_text": text,
                 "message_language": lang.detect(msg), "times_seen": 1, "source": "contributed",
             }
