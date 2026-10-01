@@ -51,7 +51,9 @@ class LeakScan(unittest.TestCase):
         self.assertEqual(leak_scan(d), [])
         (d / "bad.jsonl").write_text('{"t": "call 677 12 34 56 or a@b.com https://storage.tally.so/x"}\n', encoding="utf-8")
         kinds = {h.split()[1] for h in leak_scan(d)}
-        self.assertEqual(kinds, {"phone:", "email:", "private_file:"})
+        self.assertTrue({"phone:", "email:", "private_file:"} <= kinds)
+        (d / "bad.jsonl").write_text('{"t": "account 93417225, +1 (619) 705-8649"}\n', encoding="utf-8")
+        self.assertIn("long_number:", {h.split()[1] for h in leak_scan(d)})
 
 
 class Names(unittest.TestCase):

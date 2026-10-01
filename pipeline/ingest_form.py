@@ -12,12 +12,12 @@ from pathlib import Path
 
 from . import taxonomy as T
 
-# key -> (title prefix, kind, mapping table)
+# key -> (title prefix, or a tuple of them when the wording changed over time, kind, mapping table)
 QUESTIONS = {
     "age_ok": ("i am 18 or older", "flag", None),
     "consent": ("i agree that my report", "flag", None),
     "channel": ("how did it reach you", "one", T.FORM_CHANNEL),
-    "scam_types": ("what was it about", "many", T.FORM_SCAM_TYPE),
+    "scam_types": (("what was it about", "what was this scam about"), "many", T.FORM_SCAM_TYPE),
     "screenshots": ("upload screenshots", "files", None),
     "message_text": ("or paste the message text", "text", None),
     "sender": ("who sent it", "text", None),
@@ -47,6 +47,10 @@ def _norm(h: str) -> str:
     return re.sub(r"\s+", " ", (h or "").strip().lower().replace("’", "'"))
 
 
+def _prefixes(p):
+    return p if isinstance(p, tuple) else (p,)
+
+
 def _columns(headers):
     """question key -> list of (header, option-or-None)."""
     cols = {k: [] for k in QUESTIONS}
@@ -57,7 +61,7 @@ def _columns(headers):
         u = re.match(r"untitled [a-z ]*field \((.*)\)$", n)
         if u:
             for key, (prefix, kind, _) in QUESTIONS.items():
-                if kind == "flag" and u.group(1).startswith(prefix):
+                if kind == "flag" and u.group(1).startswith(_prefixes(prefix)):
                     cols[key].append((h, None))
                     break
             continue
@@ -66,9 +70,10 @@ def _columns(headers):
                 if n == "src":
                     cols[key].append((h, None))
                 continue
-            if n.startswith(prefix):
+            if n.startswith(_prefixes(prefix)):
                 m = re.search(r"\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*$", h or "")
-                opt = m.group(1) if m and len(h) - len(m.group(0)) >= len(prefix) else None
+                plen = min(len(x) for x in _prefixes(prefix) if n.startswith(x))
+                opt = m.group(1) if m and len(h) - len(m.group(0)) >= plen else None
                 cols[key].append((h, opt))
                 break
     return cols

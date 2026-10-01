@@ -16,6 +16,7 @@ Official alerts about scams in Cameroon are scattered across ministry pages, new
 |---|---|
 | `reports.jsonl` / `.csv` | one scam experience reported through the form |
 | `public_alerts.jsonl` / `.csv` | one scam campaign documented by an official body, news site or fact-checker |
+| `genuine_messages.jsonl` / `.csv` | one real message from MTN or Orange (not a scam), so tools can learn what genuine looks like |
 | `scam_numbers.csv` | one scammer number (pseudonymized) and how often it appears across reports and alerts |
 | `stats.json` | counts by scam type, channel, region, outcome |
 

@@ -5,11 +5,12 @@
 Inputs (all private, under raw/):
   raw/tally_exports/*.csv             form submissions, exported from Tally
   raw/web/curated_public_alerts.jsonl  facts extracted from public alerts
+  raw/genuine/*.txt                    genuine operator messages contributed by people (not scams)
   raw/screenshots/                     downloaded report screenshots (filled automatically)
   raw/review_overrides.jsonl           manual corrections after review (optional)
 
 Outputs:
-  release/<version>/reports.jsonl|csv, public_alerts.jsonl|csv, scam_numbers.csv, stats.json
+  release/<version>/reports.jsonl|csv, public_alerts.jsonl|csv, genuine_messages.jsonl|csv, scam_numbers.csv, stats.json
   raw/review_queue.csv                 what needs a human look before release (private)
   raw/report_subscribers.txt           emails asking for the public report (private, never released)
 """
@@ -27,6 +28,7 @@ from . import anonymize as A
 from . import lang
 from . import taxonomy as T
 from .ingest_form import read_tally_csv, missing_columns
+from .genuine import build_genuine, FIELDS as GENUINE_FIELDS
 
 ROOT = Path(os.environ.get("STOPARNAQUE_ROOT") or Path(__file__).resolve().parent.parent)
 RAW = ROOT / "raw"
@@ -157,6 +159,9 @@ def build_reports(log, with_screens=True):
         miss = missing_columns(f)
         if miss:
             log.append(f"{f.name}: columns not found for {miss}")
+        vital = [k for k in ("age_ok", "consent", "channel", "scam_types") if k in miss]
+        if vital:  # usually a question was renamed on the form: add the new title to QUESTIONS
+            raise RuntimeError(f"{f.name}: cannot find {vital}; a form question was probably renamed")
         for r in read_tally_csv(f):
             if r["submission_id"] in seen_ids:  # same submission in two exports
                 continue
@@ -186,10 +191,13 @@ def build_reports(log, with_screens=True):
         if placeholder:  # "I deleted it", "I don't have it": not a scam message, never release as one
             pasted = ""
         ocr = (r.get("_ocr") or "").strip()
+        if ov.get("no_message"):  # screenshots are payment proofs etc., not the scam message
+            pasted, ocr = "", ""
         raw_text = ov.get("message_text") or pasted or ocr
         origin = "reviewed" if ov.get("message_text") else ("pasted" if pasted else ("screenshot" if ocr else None))
         text = A.anonymize_text(raw_text)
-        shot_text = A.anonymize_text(ov.get("screenshot_text") or ocr) or None
+        # once the message is transcribed by hand, the raw OCR (with phone UI clutter) is not released
+        shot_text = A.anonymize_text(ov.get("screenshot_text") or ("" if ov.get("message_text") else ocr)) or None
 
         sender_raw = (r.get("sender") or "").strip()
         sender_phone = (A.extract_phones(sender_raw) or [None])[0]
@@ -397,6 +405,8 @@ LEAKS = {
     "phone": re.compile(r"(?<![\d:\-])(?!6\d\d-[0-9a-f]{6}(?![0-9a-f]))(?:\+|00)?(?:237\+?[ .\-]?)?6[5-9](?:[ .\-]?\d){7}(?!\d)"),
     "email": re.compile(r"(?<![\w.+\-\[])[\w.+\-]+@[\w\-]+\.[a-z]{2,}", re.I),
     "private_file": re.compile(r"storage\.tally\.so|accessToken=", re.I),
+    # any number with 8+ digits (foreign phones, account numbers, IDs) unless it is an amount
+    "long_number": re.compile(r"(?<![\w:\-\[])\+?\(?\d(?:[ .\-()]{0,2}\d){7,}(?!\d)(?!\s*(?:f?cfa|xaf|francs?|frs|fr)\b)", re.I),
 }
 
 
@@ -414,7 +424,17 @@ def leak_scan(out: Path) -> list:
         if f.suffix not in (".jsonl", ".csv", ".json"):
             continue
         for n, line in enumerate(f.read_text(encoding="utf-8-sig").splitlines(), 1):
+            for m in LEAKS["private_file"].finditer(line):  # before links are blanked below
+                hits.append(f"{f.name}:{n} private_file: {m.group(0)}")
+            # dates, times and our own pseudonym codes are digits but not personal data
+            line = re.sub(r"\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?", "DATE", line)
+            line = re.sub(r"(?i)h(?:tt|xx)ps?://[^\s\",|]+", "URL", line)  # article ids in source links
+            line = re.sub(r"(?<![\w-])(?:\d{3}|intl)-[0-9a-f]{6}(?![0-9a-f])", "TOKEN", line)
+            for num in A.OFFICIAL:  # public operator numbers are kept on purpose
+                line = re.sub(r"(?:\+?237[ .\-]?)?" + r"[ .\-]?".join(num), "OFFICIAL", line)
             for kind, rx in LEAKS.items():
+                if kind == "private_file":
+                    continue
                 for m in rx.finditer(line):
                     hits.append(f"{f.name}:{n} {kind}: {m.group(0)}")
     return hits
@@ -424,16 +444,19 @@ def build(version="dev", with_screens=True):
     log = []
     reports, review, subscribers, dropped, total = build_reports(log, with_screens)
     alerts = build_alerts()
+    genuine = build_genuine(RAW, log)
     out = RELEASE / version
     out.mkdir(parents=True, exist_ok=True)
     _write(reports, REPORT_FIELDS, out / "reports")
     _write(alerts, ALERT_FIELDS, out / "public_alerts")
+    _write(genuine, GENUINE_FIELDS, out / "genuine_messages")
     nums = scam_numbers(reports, alerts)
     with open(out / "scam_numbers.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=["phone_id", "prefix", "times_reported", "times_in_alerts", "top_scam_types", "first_seen"])
         w.writeheader()
         w.writerows(nums)
     st = stats(reports, alerts, dropped, total)
+    st["genuine_messages"] = {"unique": len(genuine), "message_kind": dict(Counter(g["message_kind"] for g in genuine).most_common())}
     (out / "stats.json").write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
     leaks = leak_scan(out)
     if leaks:
@@ -446,5 +469,5 @@ def build(version="dev", with_screens=True):
         w.writerows(review)
     if subscribers:
         (RAW / "report_subscribers.txt").write_text("\n".join(sorted(set(subscribers))), encoding="utf-8")
-    return {"out": str(out), "reports": len(reports), "alerts": len(alerts), "numbers": len(nums),
+    return {"out": str(out), "reports": len(reports), "alerts": len(alerts), "genuine": len(genuine), "numbers": len(nums),
             "review": len(review), "dropped": dict(dropped), "log": log}

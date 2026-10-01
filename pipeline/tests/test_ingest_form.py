@@ -92,6 +92,15 @@ class PerOption(unittest.TestCase):
         r = read_tally_csv(write([row], list(row)))[0]
         self.assertFalse(r["consent"])
 
+    def test_renamed_scam_type_question(self):
+        # title changed on the live form on 2026-09-30
+        new_q = "What was this scam about? Tick only what happened this time. / De quoi s'agissait-il cette fois ?"
+        row = dict(BASE)
+        row[f"{new_q} ({OPT_A})"] = "TRUE"
+        row[f"{new_q} ({OPT_B})"] = "FALSE"
+        r = read_tally_csv(write([row], list(row)))[0]
+        self.assertEqual(r["scam_types"], ["wrong_number_reversal"])
+
     def test_reports_missing_columns(self):
         path = write([{"Submission ID": "x"}], ["Submission ID"])
         self.assertIn("scam_types", missing_columns(path))

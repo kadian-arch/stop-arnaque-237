@@ -12,17 +12,20 @@ Written in the spirit of "Datasheets for Datasets" (Gebru et al.). Numbers for e
 
 ## Composition
 
-Three files per release:
+Four files per release:
 
 | File | One row is | Source |
 |---|---|---|
 | `reports` | one scam experience reported by a person | anonymous public form |
 | `public_alerts` | one scam campaign documented by an official body, news site or fact-checker | public web pages |
+| `genuine_messages` | one real operator message (not a scam) | contributed by people from their own phones |
 | `scam_numbers` | one scammer phone number (pseudonymized) with how often it appears | derived from the two above |
 
 Each comes as `.jsonl` and `.csv` (list fields joined with `|`).
 
 **Report fields:** channel, scam types, the message text (anonymized) and its language, text read from uploaded files, attachment types, sender type, the sender's pseudonymized number, numbers and domains in the text, call details (who the caller claimed to be, what they asked, language, how it ended), outcome, amount lost, payment rail, what the person did after, region, approximate date, and a `message_cluster` id shared by reports of the same message.
+
+**Genuine message fields:** operator, the sender name shown on the phone, line type (personal or merchant/agent), message kind (money received, money sent, cash-in, cash-out, bundle purchase, loan advance, login code, promo...), the message text (anonymized), language, and how many times the same text was seen. Label: `not_scam`.
 
 **Public alert fields:** source, source URL, publication date, title, a short summary written by the project, who was impersonated, who was targeted, channels, scam types, requested actions, amount requested, the scam message itself when the source quotes it (`example_message`, anonymized), pseudonymized numbers, defanged domains.
 
@@ -51,7 +54,10 @@ Applied by `pipeline/anonymize.py` before anything is written to a release:
 - **Transaction IDs** become `[TXN_ID]`.
 - **Emails** become `[EMAIL@domain]` (the domain is kept, since gmail.com vs gov.cm is a useful signal).
 - **Links** are defanged (`hxxps://site[.]xyz`) so nobody clicks a live scam link.
-- **Amounts** are kept.
+- **Amounts and balances** are kept. Once names, numbers and account numbers are gone they point to no one, and they are part of what a real message looks like.
+- **Account numbers, login codes and any other long number** become `[ACCOUNT]`, `[CODE]` or `[NUMBER]`.
+- **Official operator numbers** (MTN and Orange helplines and WhatsApp lines printed in their own messages) are kept, because telling them apart from look-alikes matters.
+- **Business names** of merchants are kept, but agent shop names are removed with the person, since they point to who runs them.
 - **Screenshots** are never released. Their text is read with OCR, anonymized, and checked by hand.
 - **Emails left for the public report** are stored separately and never released.
 - **Last check:** after writing a release, the build scans every file for a raw mobile number, an email address or a private upload link, and stops if it finds one.
