@@ -29,6 +29,28 @@ from . import lang
 from . import taxonomy as T
 from .ingest_form import read_tally_csv, missing_columns
 from .genuine import build_genuine, FIELDS as GENUINE_FIELDS
+from .schema import validate, coverage
+from .export import workbook, parquet
+
+TARGET_PER_TYPE = 5  # release floor: real messages per scam type (not a cap)
+
+
+def write_coverage(cov, n_reports, n_genuine):
+    """_work/COVERAGE.md: what is in and what is still missing, rewritten on every build (private)."""
+    ok = [t for t, c in cov.items() if c["total"] >= TARGET_PER_TYPE]
+    some = [t for t, c in cov.items() if 0 < c["total"] < TARGET_PER_TYPE]
+    none = [t for t, c in cov.items() if c["total"] == 0]
+    lines = [f"# Coverage, updated {datetime.now().strftime('%Y-%m-%d %H:%M')}", "",
+             f"Reports: {n_reports}. Genuine operator messages: {n_genuine}.", "",
+             f"Real scam messages per type (target {TARGET_PER_TYPE} each, more is better):", "",
+             "| Scam type | From reports | From alerts | Total |", "|---|---|---|---|"]
+    lines += [f"| {t} | {c['from_reports']} | {c['from_alerts']} | {c['total']} |"
+              for t, c in sorted(cov.items(), key=lambda kv: -kv[1]["total"])]
+    lines += ["", f"**Reached:** {', '.join(ok) or 'none yet'}",
+              f"**Started:** {', '.join(some) or 'none'}", f"**Still zero:** {', '.join(none) or 'none'}"]
+    work = ROOT / "_work"
+    work.mkdir(exist_ok=True)
+    (work / "COVERAGE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 ROOT = Path(os.environ.get("STOPARNAQUE_ROOT") or Path(__file__).resolve().parent.parent)
 RAW = ROOT / "raw"
@@ -455,12 +477,28 @@ def build(version="dev", with_screens=True):
         w = csv.DictWriter(f, fieldnames=["phone_id", "prefix", "times_reported", "times_in_alerts", "top_scam_types", "first_seen"])
         w.writeheader()
         w.writerows(nums)
+    tables = {"reports": reports, "public_alerts": alerts, "genuine_messages": genuine, "scam_numbers": nums}
+    fields = {"reports": REPORT_FIELDS, "public_alerts": ALERT_FIELDS, "genuine_messages": GENUINE_FIELDS,
+              "scam_numbers": ["phone_id", "prefix", "times_reported", "times_in_alerts", "top_scam_types", "first_seen"]}
+    problems = validate(tables)
+    if problems:
+        raise RuntimeError("data does not match the schema:\n" + "\n".join(problems[:30]))
+
     st = stats(reports, alerts, dropped, total)
     st["genuine_messages"] = {"unique": len(genuine), "message_kind": dict(Counter(g["message_kind"] for g in genuine).most_common())}
+    st["coverage"] = coverage(reports, alerts)
     (out / "stats.json").write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
     leaks = leak_scan(out)
     if leaks:
         raise RuntimeError("possible personal data in release, nothing may be published:\n" + "\n".join(leaks[:20]))
+    if version != "dev" and review:  # a numbered release only ships fully reviewed data
+        raise RuntimeError(f"{len(review)} report(s) still in raw/review_queue.csv; review them before releasing {version}")
+
+    # human- and Hugging Face-friendly copies, made only from data that passed both checks
+    workbook(out / f"stop_arnaque_237_{version}.xlsx", version, tables, fields, st)
+    for name, rows in tables.items():
+        parquet(out / f"{name}.parquet", fields[name], rows)
+    write_coverage(st["coverage"], len(reports), len(genuine))
 
     RAW.mkdir(exist_ok=True)
     with open(RAW / "review_queue.csv", "w", newline="", encoding="utf-8-sig") as f:

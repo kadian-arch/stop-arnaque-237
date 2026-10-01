@@ -18,7 +18,9 @@ Official alerts about scams in Cameroon are scattered across ministry pages, new
 | `public_alerts.jsonl` / `.csv` | one scam campaign documented by an official body, news site or fact-checker |
 | `genuine_messages.jsonl` / `.csv` | one real message from MTN or Orange (not a scam), so tools can learn what genuine looks like |
 | `scam_numbers.csv` | one scammer number (pseudonymized) and how often it appears across reports and alerts |
-| `stats.json` | counts by scam type, channel, region, outcome |
+| `stats.json` | counts by scam type, channel, region, outcome, and real examples held per scam type |
+| `stop_arnaque_237_<version>.xlsx` | everything above in one Excel workbook, with a data dictionary sheet |
+| `*.parquet` | the same tables in Parquet, for data tools and Hugging Face |
 
 Field meanings: [DATASHEET.md](DATASHEET.md). Codes: [TAXONOMY.md](TAXONOMY.md).
 
@@ -37,7 +39,8 @@ Details in [PRIVACY.md](PRIVACY.md) and [DATASHEET.md](DATASHEET.md#anonymizatio
 Everything from the raw form export to a release is one command, so every release can be rebuilt and checked.
 
 ```bash
-python -m pipeline test                    # 40 tests: anonymization, form import, file types, end-to-end privacy check
+python -m pipeline pull                    # form submissions straight from Tally (needs TALLY_API_KEY in .env)
+python -m pipeline test                    # 47 tests: anonymization, form import, file types, end-to-end privacy check
 python -m pipeline build --version v1.0    # raw/ -> release/v1.0/
 python -m pipeline.harvest                 # re-download the public alert sources
 ```
@@ -49,6 +52,9 @@ python -m pipeline.harvest                 # re-download the public alert source
 | `pipeline/ocr.py` | reads screenshot text with the OCR built into Windows (English + French) |
 | `pipeline/lang.py` | tags each message en / fr / pidgin / mixed |
 | `pipeline/anonymize.py` | phones, names, IDs, emails, links |
+| `pipeline/genuine.py` | genuine operator messages contributed by people (the "not a scam" table) |
+| `pipeline/schema.py` | meaning and allowed values of every column; checks run before any release |
+| `pipeline/export.py` | Excel workbook (with a data dictionary sheet) and Parquet copies |
 | `pipeline/build.py` | merge, anonymize, link repeated messages and numbers, export, stats, review queue; the build fails if any raw number, email or private link is left in the output |
 | `pipeline/harvest.py` | public sources |
 

@@ -66,7 +66,7 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(self.res["dropped"].get("no_consent"), 1)
 
     def test_no_raw_pii_anywhere_in_release(self):
-        blob = "".join(p.read_text(encoding="utf-8-sig") for p in self.out.iterdir())
+        blob = "".join(p.read_text(encoding="utf-8-sig") for p in self.out.iterdir() if p.suffix in (".jsonl", ".csv", ".json"))
         for secret in ["677 12 34 56", "677123456", "Ekane", "someone@example.com"]:
             self.assertNotIn(secret, blob)
 

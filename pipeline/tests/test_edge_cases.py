@@ -123,10 +123,20 @@ class FullBuildWithFiles(unittest.TestCase):
         (shots / "3.opus").write_bytes(b"voice note")
         os.environ["STOPARNAQUE_ROOT"] = str(cls.tmp)
         import pipeline.build as B
-        cls.res = importlib.reload(B).build("t", with_screens=True)
+        cls.res = importlib.reload(B).build("dev", with_screens=True)
         cls.reps = {json.loads(l)["src_channel"] and json.loads(l)["id"]: json.loads(l) for l in
-                    (cls.tmp / "release" / "t" / "reports.jsonl").read_text(encoding="utf-8").splitlines()}
+                    (cls.tmp / "release" / "dev" / "reports.jsonl").read_text(encoding="utf-8").splitlines()}
         cls.queue = list(csv.DictReader(open(cls.tmp / "raw" / "review_queue.csv", encoding="utf-8-sig")))
+        cls.B = B
+
+    def test_numbered_release_needs_review_done(self):
+        with self.assertRaisesRegex(RuntimeError, "review them before releasing"):
+            self.B.build("v9.9", with_screens=False)
+
+    def test_excel_and_parquet_written(self):
+        out = self.tmp / "release" / "dev"
+        self.assertTrue((out / "stop_arnaque_237_dev.xlsx").exists())
+        self.assertTrue((out / "reports.parquet").exists())
 
     @classmethod
     def tearDownClass(cls):
