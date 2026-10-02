@@ -99,7 +99,7 @@ def extract_phones(text: str) -> list:
 
 # ---------- ids, emails, urls ----------
 TXN = re.compile(r"(?<![\d])\d{10,19}(?![\d])")
-TXN_LABELED = re.compile(r"(?i)(transaction\s*(?:id|ref)[^:]*:\s*|txn\s*id\s*:\s*|r[ée]f(?:[ée]rence)?\s*:\s*)([A-Z0-9_\-]{6,})")
+TXN_LABELED = re.compile(r"(?i)(transaction\s*(?:id|ref)[^:]*:\s*|txn\s*id\s*:\s*|r[ée]f(?:[ée]rence)?\s*:\s*|(?:loan|refund|repayment)\s*id\s*:\s*)([A-Z0-9_\-]{6,})")
 ACCOUNT = re.compile(r"(?i)((?:mobile money account|account(?: number| no\.?)?|compte)\s*:?\s*(?:FRI:)?)\d{6,12}")
 # Names of people who contributed their own messages (they appear in "Congratulations <NAME>").
 # Private list, one name per line, in raw/names_to_mask.txt; never committed.

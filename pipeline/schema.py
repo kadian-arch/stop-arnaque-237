@@ -7,7 +7,7 @@ from . import taxonomy as T
 
 GENUINE_KINDS = ["money_received", "money_sent", "agent_cash_in", "agent_cash_out", "agent_withdrawal", "loan_offer", "agent_info",
                  "service_subscription", "account_notice", "security_tip", "bank_alert", "government_notice",
-                 "merchant_debit", "bill_payment", "loan_advance", "loan_repayment", "otp_code", "promo", "other"]
+                 "merchant_debit", "bill_payment", "loan_advance", "loan_repayment", "airtime_topup", "otp_code", "promo", "other"]
 
 V = {  # allowed values (lists may be empty; None is always allowed)
     "channel": T.CHANNELS, "channels": T.CHANNELS, "scam_types": list(T.SCAM_TYPES),

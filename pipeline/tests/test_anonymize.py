@@ -109,6 +109,9 @@ class IdsLinksEmails(unittest.TestCase):
         out = A.anonymize_text("Financial Transaction Id: 18935634160. External Transaction Id: GOALS_REQ_441279.")
         self.assertNotIn("18935634160", out)
         self.assertNotIn("GOALS_REQ_441279", out)
+        # loan ids embed the borrower's number at the end
+        out = A.anonymize_text("Loan ID : BC0004X01T202607221257160681M70000001. Refund ID : BC0004X02T20260806RM70000001.")
+        self.assertNotIn("70000001", out)
 
     def test_email_keeps_domain(self):
         self.assertEqual(A.anonymize_text("write to recrutement.minfi@gmail.com"), "write to [EMAIL@gmail.com]")
