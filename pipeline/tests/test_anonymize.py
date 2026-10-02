@@ -96,6 +96,8 @@ class Names(unittest.TestCase):
     def test_orgs_kept(self):
         out = A.anonymize_text("A transaction of 500 XAF by MTNC BUNDLES_FORFAITS (MTN_Bundles)")
         self.assertIn("MTNC BUNDLES_FORFAITS", out)
+        out = A.anonymize_text("XAF 193.00 Débit du cpte REF:S11FRGEXAFL00002 FRAIS DE PACKAGE COMPTE D EPARGNE")
+        self.assertIn("FRAIS DE PACKAGE COMPTE", out)
 
     def test_review_flag(self):
         self.assertTrue(A.needs_review("then Marie Ngono called again"))

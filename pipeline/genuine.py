@@ -25,7 +25,7 @@ HEADER = re.compile(r'^\s*From\s*(.*?)\s+on\s+(?:an?\s+)?(.*?)\s*;\s*"?(.*)$', r
 KINDS = [  # first match wins
     ("otp_code", r"code\s*:?\s*\[?\w*\]?.*(?:login|connexion)|following code|verification code|\botp\b|your [\w ]{0,20}code\s*(?:is|:)|le num[ée]ro .* pour continuer|confidential code"),
     ("government_notice", r"passport|pré-?enr[oô]lement|pre-enrolment|dgsn|gdns"),
-    ("bank_alert", r"\buba\b|carte .* activ|received cr xaf|mobile banking"),
+    ("bank_alert", r"\buba\b|\becobank\b|carte .* activ|received cr xaf|mobile banking|(?:d[ée]bit|cr[ée]dit) (?:du|au) cpte"),
     ("security_tip", r"fraud|official .* page|crime|protect your identity|reset your momo pin|never ask"),
     ("loan_advance", r"received an advance"),
     ("loan_repayment", r"has been repaid"),

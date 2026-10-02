@@ -170,6 +170,9 @@ KEEP = {
     "ENNOVATIVE", "GAMING", "LEEDTECH", "LTD", "BETPAWA",
     # words operators put in capitals after a greeting
     "CUSTOMER", "CLIENT", "AGENT", "ABONNE", "ABONNÉ", "SUBSCRIBER", "PARTNER", "ALL", "TOUS",
+    # banks and bank-alert wording
+    "ECOBANK", "UBA", "AFRILAND", "BICEC", "SGC", "SCB", "CCA", "BANK", "BANQUE",
+    "PACKAGE", "COMPTE", "EPARGNE", "ÉPARGNE", "FRAIS",
 }
 
 
