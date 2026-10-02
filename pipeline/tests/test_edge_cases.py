@@ -30,7 +30,7 @@ class Amounts(unittest.TestCase):
     def test_variants(self):
         cases = {"25000": 25000, "25 000": 25000, "25.000": 25000, "1,500,000": 1500000, "25000.00": 25000,
                  "25k": 25000, "2,5 millions": 2500000, "1.5m": 1500000, "150 000 FCFA": 150000,
-                 "": None, "je ne sais pas": None, "5000frs": 5000}
+                 "": None, "je ne sais pas": None, "5000frs": 5000, "50": 50000, "6500": 6500}
         for raw, want in cases.items():
             self.assertEqual(parse_amount(raw), want, raw)
 
@@ -124,7 +124,7 @@ class FullBuildWithFiles(unittest.TestCase):
         os.environ["STOPARNAQUE_ROOT"] = str(cls.tmp)
         import pipeline.build as B
         cls.res = importlib.reload(B).build("dev", with_screens=True)
-        cls.reps = {json.loads(l)["src_channel"] and json.loads(l)["id"]: json.loads(l) for l in
+        cls.reps = {json.loads(l)["id"]: json.loads(l) for l in
                     (cls.tmp / "release" / "dev" / "reports.jsonl").read_text(encoding="utf-8").splitlines()}
         cls.queue = list(csv.DictReader(open(cls.tmp / "raw" / "review_queue.csv", encoding="utf-8-sig")))
         cls.B = B

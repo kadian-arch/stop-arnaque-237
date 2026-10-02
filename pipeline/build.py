@@ -35,6 +35,9 @@ from .export import workbook, parquet
 TARGET_PER_TYPE = 5  # release floor: real messages per scam type (not a cap)
 
 
+SRC_SEEN = Counter()
+
+
 def write_coverage(cov, n_reports, n_genuine):
     """_work/COVERAGE.md: what is in and what is still missing, rewritten on every build (private)."""
     ok = [t for t, c in cov.items() if c["total"] >= TARGET_PER_TYPE]
@@ -47,7 +50,8 @@ def write_coverage(cov, n_reports, n_genuine):
     lines += [f"| {t} | {c['from_reports']} | {c['from_alerts']} | {c['total']} |"
               for t, c in sorted(cov.items(), key=lambda kv: -kv[1]["total"])]
     lines += ["", f"**Reached:** {', '.join(ok) or 'none yet'}",
-              f"**Started:** {', '.join(some) or 'none'}", f"**Still zero:** {', '.join(none) or 'none'}"]
+              f"**Started:** {', '.join(some) or 'none'}", f"**Still zero:** {', '.join(none) or 'none'}",
+              "", "Reports by shared link: " + ", ".join(f"{k} {v}" for k, v in SRC_SEEN.most_common())]
     work = ROOT / "_work"
     work.mkdir(exist_ok=True)
     (work / "COVERAGE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -63,7 +67,7 @@ REPORT_FIELDS = [
     "message_text", "text_origin", "message_language", "screenshot_text", "has_screenshot", "attachment_kinds", "sender", "sender_type", "sender_phone_id",
     "phone_ids", "domains", "caller_claimed", "caller_asked", "call_language", "call_end", "call_description",
     "outcome", "amount_lost_fcfa", "payment_rails", "actions_after", "region", "extra_notes",
-    "would_use_tool", "message_cluster", "src_channel",
+    "would_use_tool", "message_cluster",
 ]
 ALERT_FIELDS = [
     "id", "record_type", "source", "source_url", "date_published", "title", "summary", "impersonated",
@@ -275,9 +279,9 @@ def build_reports(log, with_screens=True):
             "extra_notes": A.anonymize_text(r.get("extra_notes")),
             "would_use_tool": r.get("would_use_tool"),
             "message_cluster": _cluster(text),
-            "src_channel": r.get("src"),
         }
         out.append(rec)
+        SRC_SEEN[r.get("src") or "direct"] += 1  # which shared link: internal stats only, never released
 
         reasons = []
         if origin == "screenshot":
@@ -416,7 +420,7 @@ def stats(reports, alerts, dropped, total_rows):
             "outcome": dist("outcome", reports), "region": dist("region", reports),
             "with_screenshot": sum(r["has_screenshot"] for r in reports),
             "total_lost_fcfa": sum(lost), "reports_with_amount": len(lost),
-            "would_use_tool": dist("would_use_tool", reports), "src_channel": dist("src_channel", reports),
+            "would_use_tool": dist("would_use_tool", reports),
         },
         "public_alerts_summary": {
             "sources": dist("source", alerts), "scam_types": dist("scam_types", alerts, True),
@@ -473,6 +477,7 @@ def leak_scan(out: Path) -> list:
 
 
 def build(version="dev", with_screens=True):
+    SRC_SEEN.clear()
     log = []
     reports, review, subscribers, dropped, total = build_reports(log, with_screens)
     alerts = build_alerts()

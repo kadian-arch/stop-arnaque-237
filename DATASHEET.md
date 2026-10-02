@@ -39,7 +39,7 @@ All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
 ## Collection
 
-**Reports:** an anonymous bilingual (English/French) form on Tally, shared on WhatsApp and Facebook from September 2026. Respondents must confirm they are 18 or older and agree to open publication of their anonymized report. The form never asks for names, PINs, codes, balances or ID documents. The `src_channel` field records which link a report came through (group, status, dm, fb).
+**Reports:** an anonymous bilingual (English/French) form on Tally, shared on WhatsApp and Facebook from September 2026. Respondents must confirm they are 18 or older and agree to open publication of their anonymized report. The form never asks for names, PINs, codes, balances or ID documents.
 
 **Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus warnings from Orange Cameroun, MTN Cameroon, MINPOSTEL, Cameroon Tribune, Investir au Cameroun, Journal du Cameroun and other Cameroonian and regional news sites on mobile money tricks (fake credit SMS, fake agents, one-time code theft, withdrawal prompts, fake apps), online tontines, fake ticket sites, fake utility agents, WhatsApp account takeovers, loan apps, Ponzi schemes and romance scams. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every alert links to its source.
 

@@ -128,6 +128,8 @@ def parse_amount(cell):
         t = t.replace(",", ".")
     else:
         t = re.sub(r"[.,]", "", t)
+    if mult == 1 and float(t) < 1000:  # people type "50" for 50k; no MoMo scam report is for under 1,000 FCFA
+        mult = 1_000
     try:
         return int(round(float(t) * mult))
     except ValueError:
