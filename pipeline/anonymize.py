@@ -173,6 +173,8 @@ KEEP = {
     # banks and bank-alert wording
     "ECOBANK", "UBA", "AFRILAND", "BICEC", "SGC", "SCB", "CCA", "BANK", "BANQUE",
     "PACKAGE", "COMPTE", "EPARGNE", "ÉPARGNE", "FRAIS",
+    # fake organisation names used as senders in lures (a signal, not a person)
+    "AFRICA", "AFRIQUE", "DEVELOPMENT", "FOUNDATION", "FONDATION", "FUND", "FUNDS", "GRANT", "PROGRAM", "PROGRAMME",
 }
 
 

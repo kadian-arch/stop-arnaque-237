@@ -216,7 +216,9 @@ def build_reports(log, with_screens=True):
         if ov.get("no_message"):  # screenshots are payment proofs etc., not the scam message
             pasted, ocr = "", ""
         raw_text = ov.get("message_text") or pasted or ocr
-        origin = "reviewed" if ov.get("message_text") else ("pasted" if pasted else ("screenshot" if ocr else None))
+        origin = ("reviewed" if ov.get("message_text") else ("pasted" if pasted else ("screenshot" if ocr else None)))
+        if origin and ov.get("text_origin"):  # e.g. "retold": the person's own account, not the scam text itself
+            origin = ov["text_origin"]
         text = A.anonymize_text(raw_text)
         # once the message is reviewed (typed or transcribed and checked against the image),
         # the raw OCR copy, with phone UI clutter, is not released
@@ -494,7 +496,6 @@ def build(version="dev", with_screens=True):
 
     st = stats(reports, alerts, dropped, total)
     st["genuine_messages"] = {"unique": len(genuine), "message_kind": dict(Counter(g["message_kind"] for g in genuine).most_common())}
-    st["coverage"] = coverage(reports, alerts)
     (out / "stats.json").write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
     leaks = leak_scan(out)
     if leaks:
@@ -506,7 +507,7 @@ def build(version="dev", with_screens=True):
     workbook(out / f"stop_arnaque_237_{version}.xlsx", version, tables, fields, st)
     for name, rows in tables.items():
         parquet(out / f"{name}.parquet", fields[name], rows)
-    write_coverage(st["coverage"], len(reports), len(genuine))
+    write_coverage(coverage(reports, alerts), len(reports), len(genuine))  # internal only, never in the release
 
     RAW.mkdir(exist_ok=True)
     with open(RAW / "review_queue.csv", "w", newline="", encoding="utf-8-sig") as f:

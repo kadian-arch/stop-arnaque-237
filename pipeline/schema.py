@@ -16,7 +16,7 @@ V = {  # allowed values (lists may be empty; None is always allowed)
     "requested_actions": T.REQUESTED_ACTIONS, "call_end": sorted(set(T.FORM_CALL_END.values())),
     "outcome": T.OUTCOMES, "payment_rails": T.PAYMENT_RAILS, "actions_after": sorted(set(T.FORM_AFTER.values())),
     "region": T.REGIONS, "when": sorted(set(T.FORM_WHEN.values())), "would_use_tool": ["yes", "maybe", "no"],
-    "text_origin": ["pasted", "screenshot", "reviewed"], "message_kind": GENUINE_KINDS,
+    "text_origin": ["pasted", "screenshot", "reviewed", "retold"], "message_kind": GENUINE_KINDS,
     "operator": ["mtn", "orange", "camtel", "nexttel", "bank", "government", "online_service", "partner_brand", "unknown"],
     "line_type": ["consumer", "merchant_agent", "unknown"], "label": ["not_scam"],
 }
@@ -32,7 +32,7 @@ DOC = {
         "scam_types": "Kind(s) of scam, codes in TAXONOMY.md. Ticked by the person, corrected during review where the text showed otherwise.",
         "multi_scam": "True when 4 or more types were ticked: the person listed several scams they have met, not one incident.",
         "message_text": "The scam message itself, anonymized. Empty when the person no longer had it.",
-        "text_origin": "Where message_text comes from: pasted by the person, read from a screenshot, or transcribed by hand ('reviewed').",
+        "text_origin": "Where message_text comes from: pasted by the person, read from a screenshot, transcribed by hand ('reviewed'), or the person's own retelling of a call or chat, often in the scammer's words ('retold').",
         "message_language": "Language of the message: en, fr, pidgin, mixed, unknown.",
         "screenshot_text": "Other text read from uploaded screenshots (for example payment receipts), anonymized.",
         "has_screenshot": "Whether the person uploaded files. Files themselves are never released.",
@@ -133,7 +133,7 @@ def coverage(reports, alerts):
         if t == "other":
             continue
         rep = sum(1 for r in reports if t in r["scam_types"] and not r["multi_scam"]
-                  and (r["message_text"] or r["call_description"]))
+                  and (r["message_text"] or r["call_description"] or len(r.get("extra_notes") or "") >= 40))
         al = sum(1 for a in alerts if t in a["scam_types"] and a.get("example_message"))
         out[t] = {"from_reports": rep, "from_alerts": al, "total": rep + al}
     return out
