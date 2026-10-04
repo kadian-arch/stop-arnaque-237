@@ -59,8 +59,8 @@ DOC = {
     "public_alerts": {
         "id": "Stable id of the alert (A-...).",
         "record_type": "Always 'public_alert'.",
-        "source": "Who published the alert (stopblablacam, 237check, pesacheck, minfi, a news site...).",
-        "source_url": "Link to the original article or notice.",
+        "source": "Who published the alert (stopblablacam, 237check, pesacheck, minfi, a news site...), or facebook_public_post for public posts our team saved.",
+        "source_url": "Link to the original article or notice. Empty for Facebook posts: we do not link to private people who posted a warning.",
         "date_published": "Publication date of the source (YYYY-MM-DD) when known.",
         "title": "Title of the source article.",
         "summary": "Short summary written by the project in its own words.",
@@ -98,7 +98,7 @@ DOC = {
     },
 }
 
-REQUIRED = {"reports": ["id"], "public_alerts": ["id", "source_url", "summary", "scam_types"],
+REQUIRED = {"reports": ["id"], "public_alerts": ["id", "summary", "scam_types"],
             "genuine_messages": ["id", "message_text", "label"], "scam_numbers": ["phone_id"]}
 
 

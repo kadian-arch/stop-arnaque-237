@@ -330,11 +330,13 @@ def build_reports(log, with_screens=True):
 
 # ---------------- public alerts ----------------
 def build_alerts():
-    f = RAW / "web" / "curated_public_alerts.jsonl"
+    # web alerts we curated, plus public Facebook posts the team screenshotted (no link kept, so we never point at the poster)
+    lines = []
+    for f in (RAW / "web" / "curated_public_alerts.jsonl", RAW / "facebook" / "facebook_posts.jsonl"):
+        if f.exists():
+            lines += f.read_text(encoding="utf-8").splitlines()
     out = []
-    if not f.exists():
-        return out
-    for line in f.read_text(encoding="utf-8").splitlines():
+    for line in lines:
         if not line.strip():
             continue
         a = json.loads(line)
@@ -342,10 +344,10 @@ def build_alerts():
         example = a.get("example_message")
         phones = list(dict.fromkeys(phones + A.extract_phones(example or "")))
         out.append({
-            "id": "A-" + hashlib.sha1((a["url"] + a["title"]).encode()).hexdigest()[:8],
+            "id": "A-" + hashlib.sha1(((a.get("url") or a.get("file", "")) + a["title"]).encode()).hexdigest()[:8],
             "record_type": "public_alert",
             "source": a["src"],
-            "source_url": a["url"],
+            "source_url": a.get("url"),
             "date_published": a["date"],
             "title": a["title"],
             "summary": a["summary"],
