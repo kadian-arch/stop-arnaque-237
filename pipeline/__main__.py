@@ -1,6 +1,7 @@
 """python -m pipeline build [--version v1.0] [--no-screens]
 python -m pipeline test
-python -m pipeline pull     (form submissions straight from Tally; needs TALLY_API_KEY in .env)"""
+python -m pipeline pull     (form submissions straight from Tally; needs TALLY_API_KEY in .env)
+python -m pipeline taxonomy (rewrite TAXONOMY.md from the code)"""
 import argparse
 import json
 import sys
@@ -16,6 +17,7 @@ def main():
     b.add_argument("--no-screens", action="store_true", help="skip screenshot download + OCR")
     sub.add_parser("test", help="run the test suite")
     sub.add_parser("pull", help="download all form submissions from the Tally API")
+    sub.add_parser("taxonomy", help="rewrite TAXONOMY.md from taxonomy.py and schema.py")
     a = p.parse_args()
 
     if a.cmd == "test":
@@ -28,6 +30,11 @@ def main():
     if a.cmd == "pull":
         from .pull_tally import pull
         pull(Path(__file__).resolve().parent.parent)
+        return
+
+    if a.cmd == "taxonomy":
+        from .docs import write_taxonomy
+        print(write_taxonomy(Path(__file__).resolve().parent.parent))
         return
 
     from .build import build

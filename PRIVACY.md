@@ -1,6 +1,6 @@
 # Stop Arnaque 237: Privacy notice
 
-Last updated: 28/09/2026
+Last updated: 06/10/2026
 
 ## Who runs this
 Stop Arnaque 237 is an independent project by Donalsien A., a cybersecurity engineer in Buea, Cameroon.
@@ -19,7 +19,7 @@ Your name, your PIN or secret codes, your balance, passwords, or your ID card.
 ## How your report is protected
 1. Reports are stored with our form provider (Tally), on servers in the European Union, encrypted.
 2. Before any use, we remove personal details:
-   - Phone numbers are replaced by the operator prefix and a random code (example: `67X-a41f`). The same number always gets the same code, so repeated scams can be linked, but the number can't be read back.
+   - Phone numbers are replaced by the operator prefix and a random code (example: `[PHONE:676-3fa91c]`). The same number always gets the same code, so repeated scams can be linked, but the number can't be read back.
    - Personal names are removed.
    - Scam links are made unclickable.
 3. We read the text in screenshots and anonymize that text. **Screenshots themselves are never published** and are deleted once processed, within 12 months at most.
@@ -28,6 +28,10 @@ Your name, your PIN or secret codes, your balance, passwords, or your ID card.
 
 ## What gets published
 Only anonymized reports, as an open dataset under the Creative Commons Attribution 4.0 licence (CC BY 4.0), so researchers, students and companies can use it to fight scams.
+
+## Other sources in the dataset
+- **Public social media posts** where people shared a scam they received: we keep only the scam message itself and our own summary. No link, no poster name and none of the poster's own words.
+- **Genuine operator messages** from the phones of our team and people close to it, shared with their agreement. Names, numbers, account numbers and codes are removed.
 
 ## Your choices
 - Everything except the two consent boxes is optional.
@@ -39,7 +43,7 @@ Only anonymized reports, as an open dataset under the Creative Commons Attributi
 
 # Stop Arnaque 237 : Politique de confidentialité
 
-Dernière mise à jour : 28/09/2026
+Dernière mise à jour : 06/10/2026
 
 **Qui sommes-nous :** un projet indépendant de Donalsien A., ingénieur en cybersécurité à Buea. Contact : groundtruth.cm@gmail.com
 
@@ -60,6 +64,8 @@ Dernière mise à jour : 28/09/2026
 5. Les emails sont conservés à part et jamais publiés.
 
 **Publication :** uniquement les signalements anonymisés, en données ouvertes sous licence CC BY 4.0.
+
+**Autres sources :** des publications publiques Facebook et Instagram où des personnes montrent une arnaque reçue (nous gardons seulement le message de l'arnaque et notre propre résumé, sans lien, sans nom et sans les mots de l'auteur), et de vrais messages d'opérateurs partagés par notre équipe et ses proches, avec leur accord, sans noms, numéros ni codes.
 
 **Vos choix :**
 - Tout est facultatif sauf les deux cases de consentement.

@@ -17,17 +17,17 @@ Four files per release:
 | File | One row is | Source |
 |---|---|---|
 | `reports` | one scam experience reported by a person | anonymous public form |
-| `public_alerts` | one scam campaign documented by an official body, news site or fact-checker | public web pages |
-| `genuine_messages` | one real operator message (not a scam) | contributed by people from their own phones |
+| `public_alerts` | one scam documented by an official body, news site or fact-checker, or shown in a public social media post | public web pages and public Facebook/Instagram posts |
+| `genuine_messages` | one real message (not a scam) from an operator, bank, public service or online service | contributed by the project team and people close to it, from their own phones |
 | `scam_numbers` | one scammer phone number (pseudonymized) with how often it appears | derived from the two above |
 
 Each comes as `.jsonl` and `.csv` (list fields joined with `|`).
 
 **Report fields:** channel, scam types, the message text (anonymized) and its language, text read from uploaded files, attachment types, sender type, the sender's pseudonymized number, numbers and domains in the text, call details (who the caller claimed to be, what they asked, language, how it ended), outcome, amount lost, payment rail, what the person did after, region, approximate date, and a `message_cluster` id shared by reports of the same message.
 
-**Genuine message fields:** operator, the sender name shown on the phone, line type (personal or merchant/agent), message kind (money received, money sent, cash-in, cash-out, bundle purchase, loan advance, login code, promo...), the message text (anonymized), language, and how many times the same text was seen. Label: `not_scam`.
+**Genuine message fields:** operator (MTN, Orange, Camtel, a bank, a public body, an online service or a partner brand), the sender name shown on the phone, line type (consumer or merchant/agent), message kind (money received or sent, agent cash-in and cash-out, loans, promos, security tips, bank alerts, codes...), the message text (anonymized), language, and how many times the same text was seen. Label: `not_scam`.
 
-**Public alert fields:** source, source URL, publication date, title, a short summary written by the project, who was impersonated, who was targeted, channels, scam types, requested actions, amount requested, the scam message itself when the source quotes it (`example_message`, anonymized), pseudonymized numbers, defanged domains.
+**Public alert fields:** source, source URL (empty for social media posts), publication date, title, a short summary written by the project, who was impersonated, who was targeted, channels, scam types, requested actions, amount requested, the scam message itself when the source quotes it (`example_message`, anonymized), pseudonymized numbers, defanged domains.
 
 All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
@@ -39,9 +39,13 @@ All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
 ## Collection
 
-**Reports:** an anonymous bilingual (English/French) form on Tally, shared on WhatsApp and Facebook from September 2026. Respondents must confirm they are 18 or older and agree to open publication of their anonymized report. The form never asks for names, PINs, codes, balances or ID documents.
+**Reports:** an anonymous bilingual (English/French) form on Tally, shared on WhatsApp, Facebook and LinkedIn from September 2026. Respondents must confirm they are 18 or older and agree to open publication of their anonymized report. The form never asks for names, PINs, codes, balances or ID documents.
 
-**Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus warnings from Orange Cameroun, MTN Cameroon, MINPOSTEL, Cameroon Tribune, Investir au Cameroun, Journal du Cameroun and other Cameroonian and regional news sites on mobile money tricks (fake credit SMS, fake agents, one-time code theft, withdrawal prompts, fake apps), online tontines, fake ticket sites, fake utility agents, WhatsApp account takeovers, loan apps, Ponzi schemes and romance scams. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every alert links to its source.
+**Public alerts:** pages from StopBlaBlaCam (E-SCAM section), 237 Check, PesaCheck and the Ministry of Finance (MINFI), 2020 to 2026, plus warnings from Orange Cameroun, MTN Cameroon, MINPOSTEL, Cameroon Tribune, Investir au Cameroun, Journal du Cameroun and other Cameroonian and regional news sites on mobile money tricks (fake credit SMS, fake agents, one-time code theft, withdrawal prompts, fake apps), online tontines, fake ticket sites, fake utility agents, WhatsApp account takeovers, loan apps, Ponzi schemes and romance scams. Only scam-related items were kept. Facts were extracted by hand. Summaries are written by the project. The article text is not republished; every article-based alert links to its source.
+
+**Public social media posts:** Facebook and Instagram posts in which people shared a scam message they received, saved by the project team. Only the scam message itself (the scammer's words) and a summary written by the project are released. There is no link to the post, no poster name and none of the poster's own wording, since the people who posted are private individuals.
+
+**Genuine messages:** real messages from the phones of the project team and people close to it, who agreed to share them. Names, phone numbers, account numbers, codes and IDs are removed; amounts and balances are kept.
 
 **Time frame:** public alerts from 2008 to 2026, most from 2020 onward. Reports describe scams from any date, bucketed by the respondent (`when`).
 
@@ -50,8 +54,8 @@ All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 Applied by `pipeline/anonymize.py` before anything is written to a release:
 
 - **Phone numbers** become `[PHONE:676-3fa91c]`: the 3-digit operator prefix plus a code from a keyed hash (HMAC-SHA256 with a private key). The same number always gets the same code, so repeat scammers can be linked, but the number can't be recovered. A plain hash would not be safe: all 9-digit Cameroonian numbers can be tried in seconds.
-- **Personal names** become `[NAME]`, using rules for operator message formats and cues like "from", "je suis", "Mr". Any capitalized word pair that survives is flagged for manual review before release.
-- **Transaction IDs** become `[TXN_ID]`.
+- **Personal names** become `[NAME]`, using rules for operator message formats ("from NAME (237...)", "de NAME", "Congratulations NAME") and cues like "from", "je suis", "Mr". Contributors' own names are always masked. Any capitalized word pair that survives is flagged for manual review before release.
+- **Transaction, loan and refund IDs** become `[TXN_ID]` (some loan IDs end with the borrower's number).
 - **Emails** become `[EMAIL@domain]` (the domain is kept, since gmail.com vs gov.cm is a useful signal).
 - **Links** are defanged (`hxxps://site[.]xyz`) so nobody clicks a live scam link.
 - **Amounts and balances** are kept. Once names, numbers and account numbers are gone they point to no one, and they are part of what a real message looks like.
@@ -71,7 +75,9 @@ Uploaded files are handled by type:
 - **PDFs** give their text directly, or are OCR'd if scanned.
 - **Voice notes and videos** are listened to or watched by hand.
 
-Every transcription is checked by hand against the original before release. `text_origin` says where `message_text` came from (`pasted`, `screenshot` or `reviewed`), and `message_language` gives the language (`en`, `fr`, `pidgin`, `mixed`).
+Every transcription is checked by hand against the original before release.
+
+Amounts typed in the form as a bare number under 1,000 are read as thousands ("50" means 50,000 FCFA), which is how people write amounts in Cameroon. `text_origin` says where `message_text` came from (`pasted`, `screenshot`, `reviewed`, or `retold` when it is the person's own account of a call or chat, often quoting the scammer), and `message_language` gives the language (`en`, `fr`, `pidgin`, `mixed`).
 
 ## Uses
 
@@ -89,13 +95,13 @@ Every transcription is checked by hand against the original before release. `tex
 A number that appears here may be spoofed, stolen or recycled.
 
 **Known limitations:**
-- Respondents reached through the project's own network (Buea, English-speaking groups) are likely over-represented at first.
+- Respondents reached through the project's own network are over-represented: most early reports come from the South West region and English-speaking groups.
 - Self-reported amounts are not verified.
 - Public alerts over-represent fake job ads, because that is what institutions publish about.
 
 ## Distribution and maintenance
 
-- **Where:** GitHub (github.com/kadian-arch/stop-arnaque-237).
+- **Where:** GitHub (github.com/kadian-arch/stop-arnaque-237). Each version is published as a GitHub Release with the data files attached.
 - **Licence:** data under CC BY 4.0 (see LICENSE-DATA.md), code under MIT (see LICENSE).
-- **Updates:** new versions are released as reports come in. Each version has its own folder under `release/`.
+- **Updates:** new versions are released as reports come in. Every version can be rebuilt from the private raw data with `python -m pipeline build --version <version>`.
 - **Removal requests:** write to groundtruth.cm@gmail.com with the date you submitted and a few words from your report. The report is removed from the next version.

@@ -78,6 +78,8 @@ class LeakScan(unittest.TestCase):
         self.assertTrue({"phone:", "email:", "private_file:"} <= kinds)
         (d / "bad.jsonl").write_text('{"t": "account 93417225, +1 (619) 705-8649"}\n', encoding="utf-8")
         self.assertIn("long_number:", {h.split()[1] for h in leak_scan(d)})
+        (d / "bad.jsonl").write_text('{"dropped": "moved to raw/genuine/x.txt"}\n', encoding="utf-8")
+        self.assertIn("private_path:", {h.split()[1] for h in leak_scan(d)})
 
 
 class Names(unittest.TestCase):

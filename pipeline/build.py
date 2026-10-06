@@ -206,7 +206,8 @@ def build_reports(log, with_screens=True):
             dropped["no_consent"] += 1
             continue
         if ov.get("exclude"):
-            dropped[f"excluded:{ov.get('reason', 'review')}"] += 1
+            # only the reason code is public ("not_a_scam"), the free-text note after the colon stays private
+            dropped[f"excluded:{ov.get('reason', 'review').split(':')[0].strip()}"] += 1
             continue
         email = (r.get("wants_report_email") or "").strip()
         if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
@@ -437,6 +438,8 @@ LEAKS = {
     "phone": re.compile(r"(?<![\d:\-])(?!6\d\d-[0-9a-f]{6}(?![0-9a-f]))(?:\+|00)?(?:237\+?[ .\-]?)?6[5-9](?:[ .\-]?\d){7}(?!\d)"),
     "email": re.compile(r"(?<![\w.+\-\[])[\w.+\-]+@[\w\-]+\.[a-z]{2,}", re.I),
     "private_file": re.compile(r"storage\.tally\.so|accessToken=", re.I),
+    # paths into the private working folders
+    "private_path": re.compile(r"(?<![\w.])(?:raw|_work)[/\\]\w"),
     # any number with 8+ digits (foreign phones, account numbers, IDs) unless it is an amount
     "long_number": re.compile(r"(?<![\w:\-\[])\+?\(?\d(?:[ .\-()]{0,2}\d){7,}(?!\d)(?!\s*(?:f?cfa|xaf|francs?|frs|fr)\b)", re.I),
 }
