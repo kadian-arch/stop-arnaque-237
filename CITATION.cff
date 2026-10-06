@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this dataset, please cite it as below."
+type: dataset
+title: "Stop Arnaque 237: Cameroon Scam Reports Dataset"
+abstract: >-
+  An open, anonymized dataset of scams reported in Cameroon: scam messages, calls
+  and schemes reported by people through a bilingual form, public scam alerts from
+  fact-checkers, institutions, news sites and public social media posts, a table of
+  pseudonymized scammer numbers, and genuine operator messages for comparison.
+authors:
+  - family-names: Kum
+    given-names: Donalsien Akwo
+    email: groundtruth.cm@gmail.com
+repository-code: "https://github.com/kadian-arch/stop-arnaque-237"
+url: "https://github.com/kadian-arch/stop-arnaque-237"
+license: CC-BY-4.0
+keywords:
+  - Cameroon
+  - scam
+  - fraud
+  - mobile money
+  - social engineering
+  - SMS
+  - dataset
+  - Pidgin
+  - French

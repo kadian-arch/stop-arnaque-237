@@ -101,7 +101,7 @@ A number that appears here may be spoofed, stolen or recycled.
 
 ## Distribution and maintenance
 
-- **Where:** GitHub (github.com/kadian-arch/stop-arnaque-237). Each version is published as a GitHub Release with the data files attached.
+- **Where:** GitHub (github.com/kadian-arch/stop-arnaque-237). The latest version's files are in `data/`; every version is tagged as a GitHub Release and archived on Zenodo with a DOI.
 - **Licence:** data under CC BY 4.0 (see LICENSE-DATA.md), code under MIT (see LICENSE).
 - **Updates:** new versions are released as reports come in. Every version can be rebuilt from the private raw data with `python -m pipeline build --version <version>`.
 - **Removal requests:** write to groundtruth.cm@gmail.com with the date you submitted and a few words from your report. The report is removed from the next version.

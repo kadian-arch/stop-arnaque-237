@@ -3,6 +3,7 @@ raw/
 _work/
 exports/
 *.xlsx
+!data/*.xlsx
 *.xls
 release/
 

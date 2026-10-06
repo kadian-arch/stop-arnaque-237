@@ -133,6 +133,11 @@ class FullBuildWithFiles(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "review them before releasing"):
             self.B.build("v9.9", with_screens=False)
 
+    def test_publish_only_takes_numbered_releases(self):
+        for bad in ("dev", "test", "latest"):
+            with self.assertRaisesRegex(RuntimeError, "numbered version"):
+                self.B.publish(bad)
+
     def test_excel_and_parquet_written(self):
         out = self.tmp / "release" / "dev"
         self.assertTrue((out / "stop_arnaque_237_dev.xlsx").exists())

@@ -17,6 +17,8 @@ Official alerts about scams in Cameroon are scattered across ministry pages, new
 
 ## What's in a release
 
+The latest release is in [`data/`](data/) (its version is in `data/VERSION`). Older versions are on the GitHub Releases page.
+
 | File | One row is |
 |---|---|
 | `reports.jsonl` / `.csv` | one scam experience reported through the form |
@@ -46,7 +48,8 @@ Everything from the raw form export to a release is one command, so every releas
 ```bash
 python -m pipeline pull                    # form submissions straight from Tally (needs TALLY_API_KEY in .env)
 python -m pipeline test                    # full test suite: anonymization, form import, file types, end-to-end privacy check
-python -m pipeline build --version v1.0    # raw/ -> release/v1.0/
+python -m pipeline build --version v1.0    # raw/ -> release/v1.0/ (refused while any report awaits review)
+python -m pipeline publish v1.0            # leak-scan again, then copy release/v1.0/ into data/ for committing
 python -m pipeline taxonomy               # rewrite TAXONOMY.md from the code
 python -m pipeline.harvest                 # re-download the public alert sources
 ```
@@ -81,6 +84,10 @@ Data: [CC BY 4.0](LICENSE-DATA.md). Code: [MIT](LICENSE).
 ## Contributing
 
 Report a scam through the form, or see [CONTRIBUTING.md](CONTRIBUTING.md) for code and documentation changes.
+
+## Acknowledgements
+
+Data collection: Ticha Chelsey Neh Teneng. Thanks to everyone who reported a scam or shared their messages.
 
 ## Contact
 

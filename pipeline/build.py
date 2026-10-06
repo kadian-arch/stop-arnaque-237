@@ -528,3 +528,26 @@ def build(version="dev", with_screens=True):
         (RAW / "report_subscribers.txt").write_text("\n".join(sorted(set(subscribers))), encoding="utf-8")
     return {"out": str(out), "reports": len(reports), "alerts": len(alerts), "genuine": len(genuine), "numbers": len(nums),
             "review": len(review), "dropped": dict(dropped), "log": log}
+
+
+DATA = ROOT / "data"
+
+
+def publish(version):
+    """Copy a numbered, already-built release into data/ (the committed copy) after one more leak scan."""
+    if not re.fullmatch(r"v\d+\.\d+(\.\d+)?", version):
+        raise RuntimeError(f"publish takes a numbered version like v1.0, not {version!r}")
+    src = RELEASE / version
+    if not (src / "stats.json").exists():
+        raise RuntimeError(f"{src} not found: run python -m pipeline build --version {version} first")
+    leaks = leak_scan(src)
+    if leaks:
+        raise RuntimeError("possible personal data, nothing published:\n" + "\n".join(leaks[:20]))
+    DATA.mkdir(exist_ok=True)
+    for f in DATA.iterdir():  # data/ only ever holds the latest release
+        if f.is_file():
+            f.unlink()
+    for f in sorted(src.iterdir()):
+        (DATA / f.name).write_bytes(f.read_bytes())
+    (DATA / "VERSION").write_text(version + "\n", encoding="utf-8")
+    return str(DATA)
