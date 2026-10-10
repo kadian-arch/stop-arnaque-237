@@ -2,7 +2,8 @@
 python -m pipeline test
 python -m pipeline pull     (form submissions straight from Tally; needs TALLY_API_KEY in .env)
 python -m pipeline taxonomy (rewrite TAXONOMY.md from the code)
-python -m pipeline publish v1.0  (copy a checked release into data/, the folder that is committed)"""
+python -m pipeline publish v1.0  (copy a checked release into data/, the folder that is committed)
+python -m pipeline huggingface v1.0  (dataset card + train/test files in release/hf/ for Hugging Face)"""
 import argparse
 import json
 import sys
@@ -21,6 +22,9 @@ def main():
     sub.add_parser("taxonomy", help="rewrite TAXONOMY.md from taxonomy.py and schema.py")
     pb = sub.add_parser("publish", help="copy release/<version>/ into data/ for committing")
     pb.add_argument("version")
+    hb = sub.add_parser("huggingface", help="release/<version>/ -> release/hf/ (dataset card + train/test files)")
+    hb.add_argument("version")
+    hb.add_argument("--repo-id", default="groundtruth-cm/stop-arnaque-237", help="the Hugging Face dataset id, owner/name")
     a = p.parse_args()
 
     if a.cmd == "test":
@@ -33,6 +37,11 @@ def main():
     if a.cmd == "pull":
         from .pull_tally import pull
         pull(Path(__file__).resolve().parent.parent)
+        return
+
+    if a.cmd == "huggingface":
+        from .hf import build_hf
+        print(build_hf(Path(__file__).resolve().parent.parent, a.version, a.repo_id))
         return
 
     if a.cmd == "publish":

@@ -11,6 +11,16 @@ authors:
   - family-names: Kum
     given-names: Donalsien Akwo
     email: groundtruth.cm@gmail.com
+version: "1.0"
+date-released: 2026-10-10
+doi: 10.5281/zenodo.23287618
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23287617
+    description: All versions of the dataset (resolves to the latest)
+  - type: doi
+    value: 10.5281/zenodo.23287618
+    description: Version 1.0
 repository-code: "https://github.com/kadian-arch/stop-arnaque-237"
 url: "https://github.com/kadian-arch/stop-arnaque-237"
 license: CC-BY-4.0

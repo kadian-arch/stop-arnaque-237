@@ -101,6 +101,17 @@ class EndToEnd(unittest.TestCase):
         st = json.loads((self.out / "stats.json").read_text(encoding="utf-8"))
         self.assertNotIn("dropped", st)
 
+    def test_hugging_face_folder(self):
+        import pyarrow.parquet as pq
+        from pipeline.hf import build_hf
+        hf = build_hf(self.tmp, "test", "someone/stop-arnaque-237")
+        card = (hf / "README.md").read_text(encoding="utf-8")
+        self.assertTrue(card.startswith("---\nlicense: cc-by-4.0"))
+        self.assertIn('load_dataset("someone/stop-arnaque-237")', card)
+        rows = sum(pq.read_metadata(hf / "data" / f"{s}.parquet").num_rows for s in ("train", "test"))
+        self.assertEqual(rows, len(self.rows("messages.jsonl")))
+        self.assertTrue((hf / "details" / "reports.parquet").exists())
+
     def test_subscriber_kept_private(self):
         self.assertIn("someone@example.com", (self.tmp / "raw" / "report_subscribers.txt").read_text())
 

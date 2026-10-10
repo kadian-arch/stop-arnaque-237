@@ -4,6 +4,7 @@
 ![python](https://img.shields.io/badge/python-3.10%20to%203.13-blue)
 [![data licence](https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey)](LICENSE-DATA.md)
 [![code licence](https://img.shields.io/badge/code-MIT-green)](LICENSE)
+[![DOI](https://zenodo.org/badge/1389825185.svg)](https://doi.org/10.5281/zenodo.23287617)
 
 An open dataset of real scam messages, calls and schemes reported by people in Cameroon: mobile money fraud, fake agents, fake jobs and scholarships, investment and Ponzi schemes, and more.
 
@@ -56,6 +57,7 @@ python -m pipeline test                    # full test suite: anonymization, for
 python -m pipeline build --version v1.0    # raw/ -> release/v1.0/ (refused while any report awaits review)
 python -m pipeline publish v1.0            # leak-scan again, then copy release/v1.0/ into data/ for committing
 python -m pipeline taxonomy               # rewrite TAXONOMY.md from the code
+python -m pipeline huggingface v1.0 --repo-id owner/name   # dataset card + train/test files in release/hf/
 python -m pipeline.harvest                 # re-download the public alert sources
 ```
 
@@ -69,6 +71,7 @@ python -m pipeline.harvest                 # re-download the public alert source
 | `pipeline/anonymize.py` | phones, names, IDs, emails, links |
 | `pipeline/genuine.py` | genuine operator messages contributed by people (the "not a scam" table) |
 | `pipeline/schema.py` | meaning and allowed values of every column; checks run before any release |
+| `pipeline/hf.py` | builds the Hugging Face copy: dataset card, train/test files, detail tables |
 | `pipeline/docs.py` | generates TAXONOMY.md, so the codes and the documentation can't drift apart |
 | `pipeline/export.py` | Excel workbook (with a data dictionary sheet) and Parquet copies |
 | `pipeline/build.py` | merge, anonymize, link repeated messages and numbers, export, stats, review queue; the build fails if any raw number, email or private link is left in the output |
@@ -81,6 +84,12 @@ Python 3.10 to 3.13, dependencies in `requirements.txt`. Raw inputs live in `raw
 StopBlaBlaCam (E-SCAM), 237 Check, PesaCheck and the Ministry of Finance, plus warnings from Orange Cameroun, MTN Cameroon, MINPOSTEL, Cameroon Tribune and other Cameroonian and regional news sites (the `source` field of each alert names it). Summaries are written by this project, and each article-based alert links to its original article. Where a source quotes the scam message itself, it's kept in `example_message` (anonymized).
 
 Some alerts come from public Facebook and Instagram posts where people shared a scam they received. For these we keep only the scam message itself and our own summary: no link, no poster name and none of the poster's own words, so nothing points back to the person who posted.
+
+## How to cite
+
+> Kum, D. A. (2026). *Stop Arnaque 237: Cameroon Scam Reports Dataset* (Version 1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.23287618
+
+To cite every version at once (it always resolves to the latest): https://doi.org/10.5281/zenodo.23287617. GitHub's "Cite this repository" button (right side of the repository page) gives the citation in BibTeX and APA.
 
 ## Licence
 
