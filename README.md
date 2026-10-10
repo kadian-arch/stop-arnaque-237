@@ -7,7 +7,7 @@
 
 An open dataset of real scam messages, calls and schemes reported by people in Cameroon: mobile money fraud, fake agents, fake jobs and scholarships, investment and Ponzi schemes, and more.
 
-**Status:** collecting reports. First public release planned for October 2026.
+**Status:** v1.0 released on 10 October 2026. Still collecting reports for the next version.
 
 **Share a scam you received (3 minutes, anonymous):** https://tally.so/r/eq4dzJ
 
@@ -19,22 +19,27 @@ Official alerts about scams in Cameroon are scattered across ministry pages, new
 
 The latest release is in [`data/`](data/) (its version is in `data/VERSION`). Older versions are on the GitHub Releases page.
 
-| File | One row is |
+**Start with `messages.csv`.** Every message in the dataset, one row each, labelled `scam` or `not_scam`, with the kind of scam, language, channel and a ready-made train/test split. Messages with the same wording always fall in the same split, so a model is never tested on a copy of what it learned from.
+
+| File | What it is |
 |---|---|
-| `reports.jsonl` / `.csv` | one scam experience reported through the form |
-| `public_alerts.jsonl` / `.csv` | one scam documented by an official body, news site or fact-checker, or shown in a public social media post |
-| `genuine_messages.jsonl` / `.csv` | one real message (not a scam) from MTN, Orange, Camtel, a bank, a public service or an online service, so tools can learn what genuine looks like |
-| `scam_numbers.csv` | one scammer number (pseudonymized) and how often it appears across reports and alerts |
-| `stats.json` | counts by scam type, channel, region, outcome, amount lost, and message kind |
-| `stop_arnaque_237_<version>.xlsx` | everything above in one Excel workbook, with a data dictionary sheet |
-| `*.parquet` | the same tables in Parquet, for data tools and Hugging Face |
+| `messages` (`.csv`, `.jsonl`, `.parquet`) | the main table: every message, scam or genuine, labelled |
+| `data_dictionary.csv` | what every column means and the values it can take |
+| `details/reports` | the full scam reports behind the messages: how it happened, what was asked, money lost, region |
+| `details/public_alerts` | scams documented by fact-checkers, institutions and news sites, or shown in public social media posts |
+| `details/genuine_messages` | the genuine messages with their sender, operator and kind (money received, promo, code...) |
+| `details/scam_numbers.csv` | scammer numbers (pseudonymized) and how often each appears |
+| `stats.json` | counts by label, scam type, channel, region and outcome |
+| `stop_arnaque_237_<version>.xlsx` | all of the above in one Excel workbook |
+
+What makes it useful: real scam messages sit next to the genuine operator messages they imitate (MTN and Orange money alerts, promos, security tips), in English, French and Pidgin. A detector can learn to tell them apart instead of flagging every money message.
 
 Field meanings: [DATASHEET.md](DATASHEET.md). Codes: [TAXONOMY.md](TAXONOMY.md).
 
 ## Privacy
 
 Nothing personal is released:
-- **Phone numbers** keep only the operator prefix plus a keyed code (`[PHONE:676-3fa91c]`). The same number gets the same code, so repeat scammers link up, but the number can't be recovered.
+- **Phone numbers** keep only the operator prefix plus a keyed code made of letters (`[PHONE:676-kqbwmx]`), so it can never be dialled. The same number gets the same code, so repeat scammers link up, but the number can't be recovered.
 - **Names** are removed.
 - **Links** are made unclickable.
 - **Screenshots** are never published.

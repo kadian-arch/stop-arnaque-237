@@ -19,7 +19,7 @@ Your name, your PIN or secret codes, your balance, passwords, or your ID card.
 ## How your report is protected
 1. Reports are stored with our form provider (Tally), on servers in the European Union, encrypted.
 2. Before any use, we remove personal details:
-   - Phone numbers are replaced by the operator prefix and a random code (example: `[PHONE:676-3fa91c]`). The same number always gets the same code, so repeated scams can be linked, but the number can't be read back.
+   - Phone numbers are replaced by the operator prefix and a random code (example: `[PHONE:676-kqbwmx]`). The same number always gets the same code, so repeated scams can be linked, but the number can't be read back.
    - Personal names are removed.
    - Scam links are made unclickable.
 3. We read the text in screenshots and anonymize that text. **Screenshots themselves are never published** and are deleted once processed, within 12 months at most.

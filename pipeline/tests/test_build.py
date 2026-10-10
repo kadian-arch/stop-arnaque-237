@@ -59,14 +59,15 @@ class EndToEnd(unittest.TestCase):
         os.environ.pop("STOPARNAQUE_ROOT", None)
 
     def rows(self, name):
-        return [json.loads(l) for l in (self.out / name).read_text(encoding="utf-8").splitlines()]
+        folder = self.out if name.startswith("messages") else self.out / "details"
+        return [json.loads(l) for l in (folder / name).read_text(encoding="utf-8").splitlines()]
 
     def test_consent_filter(self):
         self.assertEqual(self.res["reports"], 2)
         self.assertEqual(self.res["dropped"].get("no_consent"), 1)
 
     def test_no_raw_pii_anywhere_in_release(self):
-        blob = "".join(p.read_text(encoding="utf-8-sig") for p in self.out.iterdir() if p.suffix in (".jsonl", ".csv", ".json"))
+        blob = "".join(p.read_text(encoding="utf-8-sig") for p in self.out.rglob("*") if p.suffix in (".jsonl", ".csv", ".json"))
         for secret in ["677 12 34 56", "677123456", "Ekane", "someone@example.com"]:
             self.assertNotIn(secret, blob)
 
@@ -75,7 +76,7 @@ class EndToEnd(unittest.TestCase):
         alerts = self.rows("public_alerts.jsonl")
         self.assertEqual(reps[0]["sender_phone_id"], reps[1]["sender_phone_id"])
         self.assertEqual(reps[0]["sender_phone_id"], alerts[0]["phone_ids"][0])
-        nums = list(csv.DictReader(open(self.out / "scam_numbers.csv", encoding="utf-8-sig")))
+        nums = list(csv.DictReader(open(self.out / "details" / "scam_numbers.csv", encoding="utf-8-sig")))
         self.assertEqual(nums[0]["times_reported"], "2")
         self.assertEqual(nums[0]["times_in_alerts"], "1")
 
@@ -83,6 +84,22 @@ class EndToEnd(unittest.TestCase):
         reps = self.rows("reports.jsonl")
         self.assertIsNotNone(reps[0]["message_cluster"])
         self.assertEqual(reps[0]["message_cluster"], reps[1]["message_cluster"])
+
+    def test_messages_table(self):
+        msgs = self.rows("messages.jsonl")
+        self.assertTrue(msgs)
+        self.assertEqual({m["label"] for m in msgs}, {"scam"})
+        for m in msgs:
+            self.assertIn(m["split"], ("train", "test"))
+            self.assertIn(m["origin"], ("report", "public_alert", "social_post", "contributed"))
+        self.assertTrue((self.out / "data_dictionary.csv").exists())
+
+    def test_no_internal_columns(self):
+        rep = self.rows("reports.jsonl")[0]
+        for internal in ("would_use_tool", "attachment_kinds", "has_screenshot", "screenshot_text", "record_type"):
+            self.assertNotIn(internal, rep)
+        st = json.loads((self.out / "stats.json").read_text(encoding="utf-8"))
+        self.assertNotIn("dropped", st)
 
     def test_subscriber_kept_private(self):
         self.assertIn("someone@example.com", (self.tmp / "raw" / "report_subscribers.txt").read_text())

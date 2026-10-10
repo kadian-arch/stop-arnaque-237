@@ -17,7 +17,7 @@ from pathlib import Path
 from . import anonymize as A
 from . import lang
 
-FIELDS = ["id", "record_type", "label", "operator", "sender_shown", "line_type", "message_kind",
+FIELDS = ["id", "label", "operator", "sender_shown", "line_type", "message_kind",
           "message_text", "message_language", "times_seen", "source"]
 
 HEADER = re.compile(r'^\s*From\s*(.*?)\s+on\s+(?:an?\s+)?(.*?)\s*;\s*"?(.*)$', re.I)
@@ -136,4 +136,30 @@ def build_genuine(raw: Path, log):
     images = [p for p in folder.rglob("*") if p.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".heic")]
     if images:
         log.append(f"genuine: {len(images)} screenshot(s) in raw/genuine to transcribe into a .txt")
-    return list(seen.values())
+    return cap_templates(list(seen.values()), log)
+
+
+MAX_PER_TEMPLATE = 3
+
+
+def template(text):
+    """The wording with amounts, dates, ids and masked values blanked out."""
+    t = re.sub(r"\[[^\]]+\]", "[x]", text.lower())
+    t = re.sub(r"\d[\d\s.,:/\-]*", "#", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def cap_templates(rows, log):
+    """Keep at most MAX_PER_TEMPLATE messages per wording; times_seen becomes how often the wording occurred."""
+    groups = OrderedDict()
+    for r in rows:
+        groups.setdefault(template(r["message_text"]), []).append(r)
+    kept = []
+    for same in groups.values():
+        total = sum(r["times_seen"] for r in same)
+        for r in same[:MAX_PER_TEMPLATE]:
+            r["times_seen"] = total
+            kept.append(r)
+    if len(kept) < len(rows):
+        log.append(f"genuine: {len(rows) - len(kept)} near-duplicate message(s) left out (max {MAX_PER_TEMPLATE} per wording)")
+    return kept

@@ -12,7 +12,9 @@ Written in the spirit of "Datasheets for Datasets" (Gebru et al.). Numbers for e
 
 ## Composition
 
-Four files per release:
+The main file is `messages`: one row per message, labelled `scam` or `not_scam`, with scam types, language, channel, whether the text is the message itself or the person's retelling (`text_type`), where it comes from (`origin`) and a suggested 80/20 `split`. The split is keyed on the wording, so near-identical messages never land in both train and test. At most 3 messages with the same wording are included.
+
+Behind it, in `details/`:
 
 | File | One row is | Source |
 |---|---|---|
@@ -21,11 +23,11 @@ Four files per release:
 | `genuine_messages` | one real message (not a scam) from an operator, bank, public service or online service | contributed by the project team and people close to it, from their own phones |
 | `scam_numbers` | one scammer phone number (pseudonymized) with how often it appears | derived from the two above |
 
-Each comes as `.jsonl` and `.csv` (list fields joined with `|`).
+Every table comes as `.csv` (list fields joined with `|`), `.jsonl` and `.parquet`, and `data_dictionary.csv` lists every column. The ids link the tables: a row of `messages` with id `R-...` is the report with the same id in `details/reports`.
 
 **Report fields:** channel, scam types, the message text (anonymized) and its language, text read from uploaded files, attachment types, sender type, the sender's pseudonymized number, numbers and domains in the text, call details (who the caller claimed to be, what they asked, language, how it ended), outcome, amount lost, payment rail, what the person did after, region, approximate date, and a `message_cluster` id shared by reports of the same message.
 
-**Genuine message fields:** operator (MTN, Orange, Camtel, a bank, a public body, an online service or a partner brand), the sender name shown on the phone, line type (consumer or merchant/agent), message kind (money received or sent, agent cash-in and cash-out, loans, promos, security tips, bank alerts, codes...), the message text (anonymized), language, and how many times the same text was seen. Label: `not_scam`.
+**Genuine message fields:** operator (MTN, Orange, Camtel, a bank, a public body, an online service or a partner brand), the sender name shown on the phone, line type (consumer or merchant/agent), message kind (money received or sent, agent cash-in and cash-out, loans, promos, security tips, bank alerts, codes...), the message text (anonymized), language, and how many times the same text was seen. Label: `not_scam`. When the same wording occurs more than 3 times (for example the same bundle purchase receipt with different amounts), only 3 examples are kept and `times_seen` says how often it occurred.
 
 **Public alert fields:** source, source URL (empty for social media posts), publication date, title, a short summary written by the project, who was impersonated, who was targeted, channels, scam types, requested actions, amount requested, the scam message itself when the source quotes it (`example_message`, anonymized), pseudonymized numbers, defanged domains.
 
@@ -53,7 +55,7 @@ All codes are listed in [TAXONOMY.md](TAXONOMY.md).
 
 Applied by `pipeline/anonymize.py` before anything is written to a release:
 
-- **Phone numbers** become `[PHONE:676-3fa91c]`: the 3-digit operator prefix plus a code from a keyed hash (HMAC-SHA256 with a private key). The same number always gets the same code, so repeat scammers can be linked, but the number can't be recovered. A plain hash would not be safe: all 9-digit Cameroonian numbers can be tried in seconds.
+- **Phone numbers** become `[PHONE:676-kqbwmx]`: the 3-digit operator prefix plus a 6-letter code from a keyed hash (HMAC-SHA256 with a private key). The code is letters only, so a pseudonym can never be mistaken for, or dialled as, someone's real number. The same number always gets the same code, so repeat scammers can be linked, but the number can't be recovered. A plain hash would not be safe: all 9-digit Cameroonian numbers can be tried in seconds.
 - **Personal names** become `[NAME]`, using rules for operator message formats ("from NAME (237...)", "de NAME", "Congratulations NAME") and cues like "from", "je suis", "Mr". Contributors' own names are always masked. Any capitalized word pair that survives is flagged for manual review before release.
 - **Transaction, loan and refund IDs** become `[TXN_ID]` (some loan IDs end with the borrower's number).
 - **Emails** become `[EMAIL@domain]` (the domain is kept, since gmail.com vs gov.cm is a useful signal).

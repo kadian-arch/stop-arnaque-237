@@ -28,7 +28,7 @@ from . import anonymize as A
 from . import lang
 from . import taxonomy as T
 from .ingest_form import read_tally_csv, missing_columns
-from .genuine import build_genuine, FIELDS as GENUINE_FIELDS
+from .genuine import build_genuine, template, FIELDS as GENUINE_FIELDS
 from .schema import validate, coverage
 from .export import workbook, parquet
 
@@ -63,14 +63,13 @@ RELEASE = ROOT / "release"
 EVERYDAY_MOMO = {"wrong_number_reversal", "deposit_withdrawal_trap", "account_blocked", "credential_request", "sim_swap"}
 
 REPORT_FIELDS = [
-    "id", "record_type", "source", "submitted_month", "when", "channel", "scam_types", "multi_scam",
-    "message_text", "text_origin", "message_language", "screenshot_text", "has_screenshot", "attachment_kinds", "sender", "sender_type", "sender_phone_id",
+    "id", "submitted_month", "when", "channel", "scam_types", "multi_scam",
+    "message_text", "text_origin", "message_language", "sender", "sender_type", "sender_phone_id",
     "phone_ids", "domains", "caller_claimed", "caller_asked", "call_language", "call_end", "call_description",
-    "outcome", "amount_lost_fcfa", "payment_rails", "actions_after", "region", "extra_notes",
-    "would_use_tool", "message_cluster",
+    "outcome", "amount_lost_fcfa", "payment_rails", "actions_after", "region", "extra_notes", "message_cluster",
 ]
 ALERT_FIELDS = [
-    "id", "record_type", "source", "source_url", "date_published", "title", "summary", "impersonated",
+    "id", "source", "source_url", "date_published", "title", "summary", "impersonated",
     "target", "channels", "scam_types", "requested_actions", "amount_requested_fcfa", "example_message",
     "phone_ids", "domains", "entities",
 ]
@@ -378,6 +377,55 @@ def _write(records, fields, base: Path):
             w.writerow({k: ("|".join(map(str, v)) if isinstance(v, list) else v) for k, v in ((k, r.get(k)) for k in fields)})
 
 
+MESSAGE_FIELDS = ["id", "text", "label", "scam_types", "multi_scam", "language", "channel", "text_type", "origin", "split"]
+MAX_SAME_WORDING = 3
+
+
+def _split(text):
+    # stable 80/20 split keyed on the wording, so near-copies never straddle train and test
+    return "test" if int(hashlib.sha1(template(text).encode()).hexdigest(), 16) % 10 < 2 else "train"
+
+
+def build_messages(reports, alerts, genuine):
+    """The main table: every message we hold, scam or not, one row each, ready for a classifier."""
+    rows = []
+    for r in reports:
+        text, retold = r["message_text"], r["text_origin"] == "retold"
+        if not text and r["call_description"] and len(r["call_description"]) >= 40:  # a call leaves no message, only the story
+            text, retold = r["call_description"], True
+        if text:
+            rows.append({"id": r["id"], "text": text, "label": "scam", "scam_types": r["scam_types"],
+                         "multi_scam": r["multi_scam"], "language": lang.detect(text), "channel": r["channel"],
+                         "text_type": "retold" if retold else "verbatim", "origin": "report"})
+    for a in alerts:
+        if a["example_message"]:
+            rows.append({"id": a["id"], "text": a["example_message"], "label": "scam", "scam_types": a["scam_types"],
+                         "multi_scam": False, "language": lang.detect(a["example_message"]),
+                         "channel": (a["channels"] or [None])[0], "text_type": "verbatim",
+                         "origin": "social_post" if a["source"].endswith("_public_post") else "public_alert"})
+    for g in genuine:
+        rows.append({"id": g["id"], "text": g["message_text"], "label": "not_scam", "scam_types": [], "multi_scam": False,
+                     "language": g["message_language"], "channel": "sms", "text_type": "verbatim", "origin": "contributed"})
+    kept, per_wording = [], Counter()
+    for m in rows:  # genuine messages are already capped; this catches the same scam text quoted by many alerts
+        k = (m["label"], template(m["text"]))
+        per_wording[k] += 1
+        if per_wording[k] <= MAX_SAME_WORDING:
+            m["split"] = _split(m["text"])
+            kept.append(m)
+    return kept
+
+
+def data_dictionary(path, tables, fields):
+    from .schema import DOC, V
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["file", "column", "meaning", "allowed values"])
+        for name in tables:
+            for col in fields[name]:
+                w.writerow([name, col, DOC.get(name, {}).get(col, ""), ", ".join(V[col]) if col in V else ""])
+
+
 def scam_numbers(reports, alerts):
     agg = defaultdict(lambda: {"reports": 0, "alerts": 0, "scam_types": Counter(), "first_seen": None})
     for r in reports:
@@ -414,16 +462,12 @@ def stats(reports, alerts, dropped, total_rows):
     lost = [r["amount_lost_fcfa"] for r in reports if r.get("amount_lost_fcfa") and r.get("outcome") in ("lost_money", "someone_else_lost")]
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "form_rows_read": total_rows,
         "reports_released": len(reports),
         "public_alerts": len(alerts),
-        "dropped": dict(dropped),
         "reports": {
             "scam_types": dist("scam_types", reports, True), "channel": dist("channel", reports),
             "outcome": dist("outcome", reports), "region": dist("region", reports),
-            "with_screenshot": sum(r["has_screenshot"] for r in reports),
             "total_lost_fcfa": sum(lost), "reports_with_amount": len(lost),
-            "would_use_tool": dist("would_use_tool", reports),
         },
         "public_alerts_summary": {
             "sources": dist("source", alerts), "scam_types": dist("scam_types", alerts, True),
@@ -435,7 +479,9 @@ def stats(reports, alerts, dropped, total_rows):
 
 
 LEAKS = {
-    "phone": re.compile(r"(?<![\d:\-])(?!6\d\d-[0-9a-f]{6}(?![0-9a-f]))(?:\+|00)?(?:237\+?[ .\-]?)?6[5-9](?:[ .\-]?\d){7}(?!\d)"),
+    "phone": re.compile(r"(?<![\d:\-])(?!6\d\d-[a-z]{6}(?![a-z]))(?:\+|00)?(?:237\+?[ .\-]?)?6[5-9](?:[ .\-]?\d){7}(?!\d)"),
+    # a pseudonym code must be 6 letters; anything with digits could be read and dialled as a real number
+    "phone_code": re.compile(r"PHONE:(?:\d{3}|intl)-(?![a-z]{6}\])[\w-]+"),
     "email": re.compile(r"(?<![\w.+\-\[])[\w.+\-]+@[\w\-]+\.[a-z]{2,}", re.I),
     "private_file": re.compile(r"storage\.tally\.so|accessToken=", re.I),
     # paths into the private working folders
@@ -455,7 +501,7 @@ def leak_scan(out: Path) -> list:
     """Last check on the written release: any raw mobile number, email or private
     upload link left over is a bug in anonymization, so the build fails."""
     hits = []
-    for f in sorted(out.iterdir()):
+    for f in sorted(out.rglob("*")):
         if f.suffix not in (".jsonl", ".csv", ".json"):
             continue
         for n, line in enumerate(f.read_text(encoding="utf-8-sig").splitlines(), 1):
@@ -470,7 +516,7 @@ def leak_scan(out: Path) -> list:
             line = re.sub(r"\b\d{1,2}(?: \d{1,2}){3,}\b",
                           lambda m: "MENU" if all(int(b) - int(a) == 1 for a, b in zip(m.group(0).split(), m.group(0).split()[1:])) else m.group(0),
                           line)
-            line = re.sub(r"(?<![\w-])(?:\d{3}|intl)-[0-9a-f]{6}(?![0-9a-f])", "TOKEN", line)
+            line = re.sub(r"(?<![\w-])(?:\d{3}|intl)-[a-z]{6}(?![a-z])", "TOKEN", line)
             for num in A.OFFICIAL:  # public operator numbers are kept on purpose
                 line = re.sub(r"(?:\+?237[ .\-]?)?" + r"[ .\-]?".join(num), "OFFICIAL", line)
             for kind, rx in LEAKS.items():
@@ -488,24 +534,33 @@ def build(version="dev", with_screens=True):
     alerts = build_alerts()
     genuine = build_genuine(RAW, log)
     out = RELEASE / version
-    out.mkdir(parents=True, exist_ok=True)
-    _write(reports, REPORT_FIELDS, out / "reports")
-    _write(alerts, ALERT_FIELDS, out / "public_alerts")
-    _write(genuine, GENUINE_FIELDS, out / "genuine_messages")
+    if out.exists():  # start clean so files from an older layout never linger
+        for f in sorted(out.rglob("*"), reverse=True):
+            f.unlink() if f.is_file() else f.rmdir()
+    details = out / "details"
+    details.mkdir(parents=True, exist_ok=True)
+    messages = build_messages(reports, alerts, genuine)
+    _write(messages, MESSAGE_FIELDS, out / "messages")
+    _write(reports, REPORT_FIELDS, details / "reports")
+    _write(alerts, ALERT_FIELDS, details / "public_alerts")
+    _write(genuine, GENUINE_FIELDS, details / "genuine_messages")
     nums = scam_numbers(reports, alerts)
-    with open(out / "scam_numbers.csv", "w", newline="", encoding="utf-8-sig") as f:
+    with open(details / "scam_numbers.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=["phone_id", "prefix", "times_reported", "times_in_alerts", "top_scam_types", "first_seen"])
         w.writeheader()
         w.writerows(nums)
-    tables = {"reports": reports, "public_alerts": alerts, "genuine_messages": genuine, "scam_numbers": nums}
-    fields = {"reports": REPORT_FIELDS, "public_alerts": ALERT_FIELDS, "genuine_messages": GENUINE_FIELDS,
+    tables = {"messages": messages, "reports": reports, "public_alerts": alerts, "genuine_messages": genuine, "scam_numbers": nums}
+    fields = {"messages": MESSAGE_FIELDS, "reports": REPORT_FIELDS, "public_alerts": ALERT_FIELDS, "genuine_messages": GENUINE_FIELDS,
               "scam_numbers": ["phone_id", "prefix", "times_reported", "times_in_alerts", "top_scam_types", "first_seen"]}
+    data_dictionary(out / "data_dictionary.csv", tables, fields)
     problems = validate(tables)
     if problems:
         raise RuntimeError("data does not match the schema:\n" + "\n".join(problems[:30]))
 
     st = stats(reports, alerts, dropped, total)
     st["genuine_messages"] = {"unique": len(genuine), "message_kind": dict(Counter(g["message_kind"] for g in genuine).most_common())}
+    st["messages"] = {"rows": len(messages), "label": dict(Counter(m["label"] for m in messages)),
+                      "split": dict(Counter(m["split"] for m in messages))}
     (out / "stats.json").write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
     leaks = leak_scan(out)
     if leaks:
@@ -516,7 +571,7 @@ def build(version="dev", with_screens=True):
     # human- and Hugging Face-friendly copies, made only from data that passed both checks
     workbook(out / f"stop_arnaque_237_{version}.xlsx", version, tables, fields, st)
     for name, rows in tables.items():
-        parquet(out / f"{name}.parquet", fields[name], rows)
+        parquet((out if name == "messages" else details) / f"{name}.parquet", fields[name], rows)
     write_coverage(coverage(reports, alerts), len(reports), len(genuine))  # internal only, never in the release
 
     RAW.mkdir(exist_ok=True)
@@ -544,10 +599,14 @@ def publish(version):
     if leaks:
         raise RuntimeError("possible personal data, nothing published:\n" + "\n".join(leaks[:20]))
     DATA.mkdir(exist_ok=True)
-    for f in DATA.iterdir():  # data/ only ever holds the latest release
-        if f.is_file():
-            f.unlink()
-    for f in sorted(src.iterdir()):
-        (DATA / f.name).write_bytes(f.read_bytes())
+    for f in sorted(DATA.rglob("*"), reverse=True):  # data/ only ever holds the latest release
+        f.unlink() if f.is_file() else f.rmdir()
+    for f in sorted(src.rglob("*")):
+        dest = DATA / f.relative_to(src)
+        if f.is_dir():
+            dest.mkdir(parents=True, exist_ok=True)
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(f.read_bytes())
     (DATA / "VERSION").write_text(version + "\n", encoding="utf-8")
     return str(DATA)

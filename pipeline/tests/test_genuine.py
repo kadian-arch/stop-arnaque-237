@@ -41,6 +41,14 @@ class Genuine(unittest.TestCase):
         cash = [r for r in self.rows if r["message_kind"] == "agent_cash_out"][0]
         self.assertEqual(cash["line_type"], "merchant_agent")
 
+    def test_same_wording_capped(self):
+        from pipeline.genuine import cap_templates
+        rows = [{"message_text": f"You have received {n} XAF from [NAME]", "times_seen": 1} for n in (100, 2500, 7000, 9100, 12000)]
+        rows.append({"message_text": "Your bundle is active", "times_seen": 2})
+        kept = cap_templates(rows, [])
+        self.assertEqual(len(kept), 4)
+        self.assertEqual(kept[0]["times_seen"], 5)
+
 
 if __name__ == "__main__":
     unittest.main()

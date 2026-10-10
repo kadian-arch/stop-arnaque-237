@@ -1,0 +1,69 @@
+﻿file,column,meaning,allowed values
+messages,id,"Id of the row; the same id appears in the detail table it comes from (R- reports, A- public alerts, G- genuine messages).",
+messages,text,"The message, anonymized. Scam messages as received or as the person retold them; genuine messages as received.",
+messages,label,scam or not_scam.,"scam, not_scam"
+messages,scam_types,Kind(s) of scam (codes in TAXONOMY.md). Empty for not_scam.,"wrong_number_reversal, deposit_withdrawal_trap, fake_prize_promo, account_blocked, fake_agent_support, credential_request, family_emergency, hacked_account_money, fake_job, fake_scholarship_visa, fake_concours_admission, investment_ponzi_crypto, loan_scam, fake_seller_delivery, official_impersonation, romance, threat_extortion, sim_swap, fake_social_profile, fake_document, phishing_link, advance_fee, other"
+messages,multi_scam,"True when the person ticked 4 or more kinds, so the labels describe their experience rather than this one message.",
+messages,language,"Language of the text: en, fr, pidgin, mixed.",
+messages,channel,"How it arrived: sms, whatsapp, phone_call, social_media...","sms, whatsapp, phone_call, social_media, website_app, email, in_person, other"
+messages,text_type,"verbatim: the message itself. retold: the person's own account of a call or chat, often quoting the scammer.","verbatim, retold"
+messages,origin,"report (sent to us by the person), public_alert (fact-checkers, institutions, news), social_post (public Facebook/Instagram post), contributed (genuine message shared by its receiver).","report, public_alert, social_post, contributed"
+messages,split,"Suggested train/test split (80/20). Messages with the same wording are always in the same split, so a model is never tested on a copy of what it trained on.","train, test"
+reports,id,Stable id of the report (R-...).,
+reports,submitted_month,Month the report was sent (YYYY-MM). Exact dates are not released.,
+reports,when,"When the scam happened, as the person chose it (this_week, this_month, last_6_months, earlier_2026, 2025, before_2025).","2025, before_2025, earlier_2026, last_6_months, this_month, this_week"
+reports,channel,How the scam reached the person.,"sms, whatsapp, phone_call, social_media, website_app, email, in_person, other"
+reports,scam_types,"Kind(s) of scam, codes in TAXONOMY.md. Ticked by the person, corrected during review where the text showed otherwise.","wrong_number_reversal, deposit_withdrawal_trap, fake_prize_promo, account_blocked, fake_agent_support, credential_request, family_emergency, hacked_account_money, fake_job, fake_scholarship_visa, fake_concours_admission, investment_ponzi_crypto, loan_scam, fake_seller_delivery, official_impersonation, romance, threat_extortion, sim_swap, fake_social_profile, fake_document, phishing_link, advance_fee, other"
+reports,multi_scam,"True when 4 or more types were ticked: the person listed several scams they have met, not one incident.",
+reports,message_text,"The scam message itself, anonymized. Empty when the person no longer had it.",
+reports,text_origin,"Where message_text comes from: pasted by the person, read from a screenshot, transcribed by hand ('reviewed'), or the person's own retelling of a call or chat, often in the scammer's words ('retold').","pasted, screenshot, reviewed, retold"
+reports,message_language,"Language of the message: en, fr, pidgin, mixed, unknown.","en, fr, pidgin, local, mixed, unknown"
+reports,sender,"Who sent it, as the person wrote it, anonymized.",
+reports,sender_type,"What the sender looked like: a personal number, a name such as 'MTN', a social media account, hidden.","personal_number, alphanumeric_name, social_account, hidden, unknown, other"
+reports,sender_phone_id,"Keyed code of the sender's number: prefix + code, e.g. 678-0d4f6b. Same number, same code.",
+reports,phone_ids,Codes of every phone number found in the report.,
+reports,domains,Web domains found in the report (links are made unclickable).,
+reports,caller_claimed,For calls: who the caller said they were.,"bank_staff, employer_recruiter, government_security, operator_staff, other, relative_friend, wrong_number_sender"
+reports,caller_asked,For calls: what the caller asked the person to do.,"give_pin_code, dial_code, send_money, send_airtime, give_id_personal_info, install_app, open_link, pay_fee, nothing_yet"
+reports,call_language,For calls: language used.,"en, fr, pidgin, local, mixed, unknown"
+reports,call_end,For calls: how it ended.,"complied, hung_up, ongoing, they_stopped"
+reports,call_description,"For calls: the person's own account of the call, anonymized.",
+reports,outcome,"noticed (spotted it), almost, lost_money, someone_else_lost, unknown.","noticed, almost, lost_money, someone_else_lost, unknown"
+reports,amount_lost_fcfa,"Amount lost in FCFA, as reported. Not verified. A bare number under 1,000 is read as thousands ('50' means 50,000), the way people write amounts in Cameroon.",
+reports,payment_rails,"How the money left: mtn_momo, orange_money, bank, cash, airtime, crypto, other.","mtn_momo, orange_money, bank, cash, airtime, crypto, other"
+reports,actions_after,What the person did afterwards.,"blocked_number, nothing, recovered_money, reported_antic, reported_operator, reported_police, told_family"
+reports,region,"Region of the person, not of the scammer.","adamaoua, centre, east, far_north, littoral, north, north_west, west, south, south_west, outside_cameroon, undisclosed"
+reports,extra_notes,"Anything else the person wanted to say, anonymized.",
+reports,message_cluster,Reports with the same message share this id.,
+public_alerts,id,Stable id of the alert (A-...).,
+public_alerts,source,"Who published the alert (stopblablacam, 237check, pesacheck, minfi, a news site...), or facebook_public_post / instagram_public_post for public posts our team saved.",
+public_alerts,source_url,Link to the original article or notice. Empty for social media posts: we do not link to private people who posted a warning.,
+public_alerts,date_published,Publication date of the source (YYYY-MM-DD) when known.,
+public_alerts,title,Title of the source article.,
+public_alerts,summary,Short summary written by the project in its own words.,
+public_alerts,impersonated,Who the scammers pretended to be.,
+public_alerts,target,"Who was targeted (general_public, job_seekers, students...).",
+public_alerts,channels,How the scam travelled.,"sms, whatsapp, phone_call, social_media, website_app, email, in_person, other"
+public_alerts,scam_types,"Kind(s) of scam, codes in TAXONOMY.md.","wrong_number_reversal, deposit_withdrawal_trap, fake_prize_promo, account_blocked, fake_agent_support, credential_request, family_emergency, hacked_account_money, fake_job, fake_scholarship_visa, fake_concours_admission, investment_ponzi_crypto, loan_scam, fake_seller_delivery, official_impersonation, romance, threat_extortion, sim_swap, fake_social_profile, fake_document, phishing_link, advance_fee, other"
+public_alerts,requested_actions,What the victim was asked to do.,"give_pin_code, dial_code, send_money, send_airtime, give_id_personal_info, install_app, open_link, pay_fee, nothing_yet"
+public_alerts,amount_requested_fcfa,"Amount asked for, in FCFA, when the source states it.",
+public_alerts,example_message,"The scam message itself when the source quotes it, anonymized.",
+public_alerts,phone_ids,Keyed codes of the scam numbers the source published.,
+public_alerts,domains,Scam web domains named by the source (made unclickable).,
+public_alerts,entities,Names of schemes or platforms involved (e.g. a Ponzi scheme name).,
+genuine_messages,id,Stable id of the message (G-...).,
+genuine_messages,label,Always 'not_scam'.,"scam, not_scam"
+genuine_messages,operator,"Who sent it: mtn, orange, camtel, a bank, a government service, an online service (verification codes), or a brand advertising through the operator (partner_brand).","mtn, orange, camtel, nexttel, bank, government, online_service, partner_brand, unknown"
+genuine_messages,sender_shown,Sender name displayed on the phone (e.g. 'Mobile Money').,
+genuine_messages,line_type,consumer (personal line) or merchant_agent (shop or agent line).,"consumer, merchant_agent, unknown"
+genuine_messages,message_kind,"What the message is: money received or sent, cash-in, cash-out, bundle or merchant payment, loan advance or repayment, login code, promo.","money_received, money_sent, agent_cash_in, agent_cash_out, agent_withdrawal, loan_offer, agent_info, service_subscription, account_notice, security_tip, bank_alert, government_notice, merchant_debit, bill_payment, loan_advance, loan_repayment, airtime_topup, otp_code, promo, other"
+genuine_messages,message_text,"The message, anonymized. Amounts and balances kept; names, numbers, accounts, ids and codes removed.",
+genuine_messages,message_language,Language of the message.,"en, fr, pidgin, local, mixed, unknown"
+genuine_messages,times_seen,"How many contributed messages share this wording once amounts, dates and ids are blanked out. At most 3 examples of each wording are included.",
+genuine_messages,source,"Always 'contributed': forwarded by people from their own phones, with their agreement.",
+scam_numbers,phone_id,Keyed code of a scam number (prefix + code). The real number cannot be recovered.,
+scam_numbers,prefix,"First 3 digits of the number, which show the operator range.",
+scam_numbers,times_reported,How many reports mention this number.,
+scam_numbers,times_in_alerts,How many public alerts mention this number.,
+scam_numbers,top_scam_types,Most frequent scam types linked to this number.,
+scam_numbers,first_seen,Earliest month the number appears (YYYY-MM).,

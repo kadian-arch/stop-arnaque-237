@@ -18,10 +18,24 @@ V = {  # allowed values (lists may be empty; None is always allowed)
     "region": T.REGIONS, "when": sorted(set(T.FORM_WHEN.values())), "would_use_tool": ["yes", "maybe", "no"],
     "text_origin": ["pasted", "screenshot", "reviewed", "retold"], "message_kind": GENUINE_KINDS,
     "operator": ["mtn", "orange", "camtel", "nexttel", "bank", "government", "online_service", "partner_brand", "unknown"],
-    "line_type": ["consumer", "merchant_agent", "unknown"], "label": ["not_scam"],
+    "line_type": ["consumer", "merchant_agent", "unknown"], "label": ["scam", "not_scam"],
+    "text_type": ["verbatim", "retold"], "split": ["train", "test"],
+    "origin": ["report", "public_alert", "social_post", "contributed"],
 }
 
 DOC = {
+    "messages": {
+        "id": "Id of the row; the same id appears in the detail table it comes from (R- reports, A- public alerts, G- genuine messages).",
+        "text": "The message, anonymized. Scam messages as received or as the person retold them; genuine messages as received.",
+        "label": "scam or not_scam.",
+        "scam_types": "Kind(s) of scam (codes in TAXONOMY.md). Empty for not_scam.",
+        "multi_scam": "True when the person ticked 4 or more kinds, so the labels describe their experience rather than this one message.",
+        "language": "Language of the text: en, fr, pidgin, mixed.",
+        "channel": "How it arrived: sms, whatsapp, phone_call, social_media...",
+        "text_type": "verbatim: the message itself. retold: the person's own account of a call or chat, often quoting the scammer.",
+        "origin": "report (sent to us by the person), public_alert (fact-checkers, institutions, news), social_post (public Facebook/Instagram post), contributed (genuine message shared by its receiver).",
+        "split": "Suggested train/test split (80/20). Messages with the same wording are always in the same split, so a model is never tested on a copy of what it trained on.",
+    },
     "reports": {
         "id": "Stable id of the report (R-...).",
         "record_type": "Always 'report'.",
@@ -85,7 +99,7 @@ DOC = {
         "message_kind": "What the message is: money received or sent, cash-in, cash-out, bundle or merchant payment, loan advance or repayment, login code, promo.",
         "message_text": "The message, anonymized. Amounts and balances kept; names, numbers, accounts, ids and codes removed.",
         "message_language": "Language of the message.",
-        "times_seen": "How many times this exact text appeared among contributed messages.",
+        "times_seen": "How many contributed messages share this wording once amounts, dates and ids are blanked out. At most 3 examples of each wording are included.",
         "source": "Always 'contributed': forwarded by people from their own phones, with their agreement.",
     },
     "scam_numbers": {
@@ -98,7 +112,7 @@ DOC = {
     },
 }
 
-REQUIRED = {"reports": ["id"], "public_alerts": ["id", "summary", "scam_types"],
+REQUIRED = {"messages": ["id", "text", "label", "split"], "reports": ["id"], "public_alerts": ["id", "summary", "scam_types"],
             "genuine_messages": ["id", "message_text", "label"], "scam_numbers": ["phone_id"]}
 
 

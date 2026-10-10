@@ -89,6 +89,10 @@ class Language(unittest.TestCase):
         self.assertEqual(lang.detect("Sorry I sent money to your number by mistake please send it back"), "en")
         self.assertEqual(lang.detect("abeg my broda I don send money for your number, send am back make I no suffer"), "pidgin")
         self.assertEqual(lang.detect("ok"), "unknown")
+        # Pidgin mixed with English, seen in real reports
+        self.assertEqual(lang.detect("As e di hot for country, people na some bad egg this. He di post things for market place say e di sell phones"), "pidgin")
+        self.assertEqual(lang.detect("Abeg I get some issue and I wish u fit share. This person na scammer wey d do online clothes delivery"), "pidgin")
+        self.assertEqual(lang.detect("Plenty bonus! 1GB on the NewMoMoApp. Download, log in, make a transaction, then get 1GB valid"), "en")
 
 
 @unittest.skipUnless(platform.system() == "Windows", "Windows OCR")
@@ -125,7 +129,7 @@ class FullBuildWithFiles(unittest.TestCase):
         import pipeline.build as B
         cls.res = importlib.reload(B).build("dev", with_screens=True)
         cls.reps = {json.loads(l)["id"]: json.loads(l) for l in
-                    (cls.tmp / "release" / "dev" / "reports.jsonl").read_text(encoding="utf-8").splitlines()}
+                    (cls.tmp / "release" / "dev" / "details" / "reports.jsonl").read_text(encoding="utf-8").splitlines()}
         cls.queue = list(csv.DictReader(open(cls.tmp / "raw" / "review_queue.csv", encoding="utf-8-sig")))
         cls.B = B
 
@@ -141,7 +145,8 @@ class FullBuildWithFiles(unittest.TestCase):
     def test_excel_and_parquet_written(self):
         out = self.tmp / "release" / "dev"
         self.assertTrue((out / "stop_arnaque_237_dev.xlsx").exists())
-        self.assertTrue((out / "reports.parquet").exists())
+        self.assertTrue((out / "messages.parquet").exists())
+        self.assertTrue((out / "details" / "reports.parquet").exists())
 
     @classmethod
     def tearDownClass(cls):
@@ -151,8 +156,7 @@ class FullBuildWithFiles(unittest.TestCase):
         self.assertEqual(self.res["reports"], 2)
 
     def test_mixed_files_read(self):
-        r = next(r for r in self.reps.values() if r["attachment_kinds"])
-        self.assertEqual(r["attachment_kinds"], ["audio", "image", "pdf"])
+        r = next(r for r in self.reps.values() if "400,000" in (r["message_text"] or ""))
         self.assertIn("400,000", r["message_text"])
         self.assertIn("15000", r["message_text"])
         self.assertEqual(r["sender"], "MobileMoney")

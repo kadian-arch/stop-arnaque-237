@@ -9,7 +9,10 @@ from openpyxl.utils import get_column_letter
 from .schema import DOC, V
 
 RED, NAVY = "D32F2F", "0B132B"
-WIDE = {"message_text", "screenshot_text", "call_description", "extra_notes", "summary", "example_message", "title"}
+WIDE = {"text", "message_text", "call_description", "extra_notes", "summary", "example_message"}
+MEDIUM = {"title", "scam_types", "top_scam_types", "source_url", "sender", "domains", "phone_ids", "entities",
+          "caller_asked", "actions_after", "requested_actions", "impersonated", "sender_shown", "meaning", "allowed values"}
+ROW_HEIGHT = 48   # points: about three lines; longer text stays inside the cell (full text in the formula bar)
 
 
 def _cell(v):
@@ -30,10 +33,12 @@ def _sheet(wb, name, fields, rows):
     for r in rows:
         ws.append([_cell(r.get(f)) for f in fields])
     for i, f in enumerate(fields, 1):
-        ws.column_dimensions[get_column_letter(i)].width = 70 if f in WIDE else max(12, min(28, len(f) + 4))
+        ws.column_dimensions[get_column_letter(i)].width = 80 if f in WIDE else 32 if f in MEDIUM else max(12, min(22, len(f) + 4))
+    ws.row_dimensions[1].height = 22
     for row in ws.iter_rows(min_row=2):
-        for c in row:
-            c.alignment = Alignment(vertical="top", wrap_text=True)
+        ws.row_dimensions[row[0].row].height = ROW_HEIGHT
+        for c, f in zip(row, fields):
+            c.alignment = Alignment(vertical="top", wrap_text=f in WIDE or f in MEDIUM)
     ws.freeze_panes = "B2"
     ws.auto_filter.ref = ws.dimensions
 
@@ -46,7 +51,7 @@ def workbook(path: Path, version: str, tables: dict, fields: dict, stats: dict):
         ("Stop Arnaque 237: Cameroon Scam Reports Dataset", True),
         (f"Version {version}", False),
         ("", False),
-        ("Real scam messages, calls and schemes reported by people in Cameroon, public scam alerts, and genuine operator messages for comparison.", False),
+        ("Scam and genuine messages from Cameroon, labelled. Start with the messages sheet; the other sheets hold the full records behind it.", False),
         ("Everything is anonymized: phone numbers are replaced by keyed codes, names, account numbers and ids are removed, links are made unclickable.", False),
         ("", False),
         ("Sheets", True),
@@ -77,6 +82,7 @@ def workbook(path: Path, version: str, tables: dict, fields: dict, stats: dict):
     for col, w in zip("ABCD", (18, 22, 90, 60)):
         dd.column_dimensions[col].width = w
     for row in dd.iter_rows(min_row=2):
+        dd.row_dimensions[row[0].row].height = ROW_HEIGHT
         for c in row:
             c.alignment = Alignment(vertical="top", wrap_text=True)
     dd.freeze_panes = "A2"

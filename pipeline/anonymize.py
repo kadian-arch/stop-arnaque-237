@@ -53,9 +53,14 @@ INTL_PHONE = re.compile(r"(?<![\d\w])\+(?!237)\d{1,3}(?:[ .\-]?\(?\d{2,4}\)?){2,
 NANP_PHONE = re.compile(r"(?<![\d\w])\(\d{3}\)[ .\-]?\d{3}[ .\-]\d{4}(?!\d)|(?<![\d\w\-])\d{3}-\d{3}-\d{4}(?![\d\-])")
 
 
+def _code(value: str) -> str:
+    # letters only: a code made of digits could read as a real, dialable number (654-361321)
+    digest = hmac.new(_key(), value.encode(), hashlib.sha256).digest()
+    return "".join("abcdefghjkmnpqrstuvwxyz"[b % 23] for b in digest[:6])
+
+
 def pseudonym(digits: str) -> str:
-    code = hmac.new(_key(), digits.encode(), hashlib.sha256).hexdigest()[:6]
-    return f"{digits[:3]}-{code}"
+    return f"{digits[:3]}-{_code(digits)}"
 
 
 def normalize_cm(raw: str):
@@ -84,7 +89,7 @@ def phone_token(raw: str) -> str:
     if d:
         return f"[PHONE:{pseudonym(d)}]"
     d = re.sub(r"\D", "", raw)
-    return f"[PHONE:intl-{hmac.new(_key(), d.encode(), hashlib.sha256).hexdigest()[:6]}]"
+    return f"[PHONE:intl-{_code(d)}]"
 
 
 def extract_phones(text: str) -> list:
@@ -149,7 +154,7 @@ NAME_BEFORE_PHONE = re.compile(r"\b([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]*(?:\s+[A-ZÀ-Ý][
 NAME_IN_PARENS = re.compile(r"(\(\s*\+?237\s*[26]\d{8})\s+[A-Za-zÀ-ÿ][^()\n]*\)")
 # Operator messages: "of|to|from|by|via agent: <anything> (2376...)". The whole counterparty goes,
 # because agents print shop and business names that point to the person running them.
-COUNTERPARTY = re.compile(r"\b((?:of|to|from|by|agent:|de|à|a|par|agent\s*:))\s+(?!\[)((?:(?!\b(?:of|to|from|by|de|à|par)\s)[^()\[\]]){2,140}?)\s*(?=\(\s*\+?237\s*[26]\d)")
+COUNTERPARTY = re.compile(r"\b((?:of|to|from|by|agent:|de|à|a|par|agent\s*:))\s+(?!\[)((?:(?!\b(?:of|to|from|by|de|à|par)\s|[.!?:]\s)[^()\[\]]){2,140}?)\s*(?=\(\s*\+?237\s*[26]\d)")
 # "You Stephene Entum Tibung (2376...) have via agent"
 NAME_AFTER_YOU = re.compile(r"\b(You)\s+(?:[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]*\s+){1,5}(?=\(\s*\+?237)")
 NAME_AFTER_CUE = re.compile(
@@ -173,6 +178,8 @@ KEEP = {
     # banks and bank-alert wording
     "ECOBANK", "UBA", "AFRILAND", "BICEC", "SGC", "SCB", "CCA", "BANK", "BANQUE",
     "PACKAGE", "COMPTE", "EPARGNE", "ÉPARGNE", "FRAIS",
+    # common words people write in capitals in group names and adverts
+    "YOUR", "SINGLE", "LIFE", "LOVE", "SPECIALIST", "ANTIDOTE", "THE", "AND", "FOR",
     # fake organisation names used as senders in lures (a signal, not a person)
     "AFRICA", "AFRIQUE", "DEVELOPMENT", "FOUNDATION", "FONDATION", "FUND", "FUNDS", "GRANT", "PROGRAM", "PROGRAMME",
 }

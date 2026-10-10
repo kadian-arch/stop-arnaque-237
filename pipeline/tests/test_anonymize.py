@@ -16,8 +16,13 @@ class Phones(unittest.TestCase):
 
     def test_keeps_prefix_hides_rest(self):
         out = A.anonymize_text("Call me on 699 88 77 66 now")
-        self.assertRegex(out, r"\[PHONE:699-[0-9a-f]{6}\]")
+        self.assertRegex(out, r"\[PHONE:699-[a-z]{6}\]")
         self.assertNotIn("88 77 66", out)
+
+    def test_code_is_never_dialable(self):
+        for n in ("677123456", "655000001", "699887766", "650509223", "654361321"):
+            code = A.pseudonym(n).split("-")[1]
+            self.assertTrue(code.isalpha(), code)
 
     def test_different_numbers_different_codes(self):
         self.assertNotEqual(A.extract_phones("655000001"), A.extract_phones("655000002"))
@@ -50,6 +55,14 @@ class FrenchCounterparty(unittest.TestCase):
             self.assertNotRegex(out, r"embolo|JEAN|NOM")
 
 
+class NameRuleStopsAtSentenceEnd(unittest.TestCase):
+    def test_sentence_before_a_number_survives(self):
+        t = "they use the recording to blackmail her for money.\nGroup admin (+237670000001): send me your picture"
+        out = A.anonymize_text(t)
+        self.assertIn("blackmail her for money", out)
+        self.assertIn("[PHONE:670-", out)
+
+
 class CodesAndCredentials(unittest.TestCase):
     def test_codes_masked_words_kept(self):
         cases = {
@@ -71,7 +84,7 @@ class LeakScan(unittest.TestCase):
         from pathlib import Path
         from pipeline.build import leak_scan
         d = Path(tempfile.mkdtemp())
-        (d / "ok.csv").write_text("[PHONE:677-123456],677-123456,[EMAIL@gmail.com],25 000 FCFA\n", encoding="utf-8")
+        (d / "ok.csv").write_text("[PHONE:677-kqbwmx],677-kqbwmx,[EMAIL@gmail.com],25 000 FCFA\n", encoding="utf-8")
         self.assertEqual(leak_scan(d), [])
         (d / "bad.jsonl").write_text('{"t": "call 677 12 34 56 or a@b.com https://storage.tally.so/x"}\n', encoding="utf-8")
         kinds = {h.split()[1] for h in leak_scan(d)}
@@ -80,6 +93,9 @@ class LeakScan(unittest.TestCase):
         self.assertIn("long_number:", {h.split()[1] for h in leak_scan(d)})
         (d / "bad.jsonl").write_text('{"dropped": "moved to raw/genuine/x.txt"}\n', encoding="utf-8")
         self.assertIn("private_path:", {h.split()[1] for h in leak_scan(d)})
+        # an all-digit code reads like a real number, so it must never pass
+        (d / "bad.jsonl").write_text('{"t": "[PHONE:654-361321]"}\n', encoding="utf-8")
+        self.assertIn("phone_code:", {h.split()[1] for h in leak_scan(d)})
 
 
 class Names(unittest.TestCase):
