@@ -24,7 +24,7 @@ def main():
     pb.add_argument("version")
     hb = sub.add_parser("huggingface", help="release/<version>/ -> release/hf/ (dataset card + train/test files)")
     hb.add_argument("version")
-    hb.add_argument("--repo-id", default="groundtruth-cm/stop-arnaque-237", help="the Hugging Face dataset id, owner/name")
+    hb.add_argument("--repo-id", default="kadian-arch/stop-arnaque-237", help="the Hugging Face dataset id, owner/name")
     a = p.parse_args()
 
     if a.cmd == "test":

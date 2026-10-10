@@ -124,7 +124,7 @@ Licence: data CC BY 4.0, code MIT. Contact and removal requests: groundtruth.cm@
 """
 
 
-def build_hf(root: Path, version: str, hf_id: str = "groundtruth-cm/stop-arnaque-237") -> Path:
+def build_hf(root: Path, version: str, hf_id: str = "kadian-arch/stop-arnaque-237") -> Path:
     import pyarrow as pa
     import pyarrow.parquet as pq
 

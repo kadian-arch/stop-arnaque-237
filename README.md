@@ -10,6 +10,8 @@ An open dataset of real scam messages, calls and schemes reported by people in C
 
 **Status:** v1.0 released on 10 October 2026. Still collecting reports for the next version.
 
+Also on Hugging Face: https://huggingface.co/datasets/kadian-arch/stop-arnaque-237
+
 **Share a scam you received (3 minutes, anonymous):** https://tally.so/r/eq4dzJ
 
 ## Why
